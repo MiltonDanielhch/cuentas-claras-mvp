@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas Claras – Respaldo y bitácora</title>
+  <meta name="description" content="Exportar, importar, restablecer datos y revisar bitácora de acciones del prototipo.">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="./css/styles.css" rel="stylesheet">
+  <link href="./css/print.css" rel="stylesheet">
+</head>
+<body data-page="respaldo" data-auth="true">
+
+  <div class="cc-app-shell">
+    <aside id="ccSidebar" class="cc-sidebar">
+      <div class="cc-sidebar-brand">
+        <div class="cc-brand-mark small-mark"><i class="bi bi-journal-check"></i></div>
+        <div>
+          <strong>Cuentas Claras</strong>
+          <small class="d-block text-white-50">Gestión contable digital</small>
+        </div>
+      </div>
+      <nav id="ccSidebarMenu" class="cc-sidebar-menu"></nav>
+      <div class="cc-sidebar-footer"><small class="text-white-50">Prototipo académico · LocalStorage</small></div>
+    </aside>
+
+    <div id="ccSidebarBackdrop" class="cc-sidebar-backdrop d-none"></div>
+
+    <div class="cc-main">
+      <header id="ccTopbar" class="cc-topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button id="ccMobileToggle" class="btn btn-light btn-sm cc-mobile-only" type="button" aria-label="Abrir menú">
+            <i class="bi bi-list"></i>
+          </button>
+          <div>
+            <h1 class="h5 mb-0 fw-semibold">Respaldo y bitácora</h1>
+            <small class="text-muted d-none d-md-block">Exportar, importar, restablecer y auditar</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span id="ccUserName" class="small text-muted d-none d-md-inline">Usuario</span>
+          <button id="ccLogoutButton" class="btn btn-outline-danger btn-sm" type="button">
+            <i class="bi bi-box-arrow-right me-1"></i>Salir
+          </button>
+        </div>
+      </header>
+
+      <main class="cc-content">
+
+        <div class="alert alert-warning small mb-4 no-print">
+          <strong>Aviso de protección de datos:</strong>
+          los respaldos JSON contienen información confidencial de clientes, documentos,
+          transacciones y asientos. Guárdelos solo en dispositivos seguros y no los comparta
+          sin autorización. Este prototipo usa LocalStorage del navegador; no es un sistema
+          productivo en la nube.
+        </div>
+
+        <!-- Estadísticas de almacenamiento -->
+        <div class="card mb-4">
+          <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold">
+                <i class="bi bi-hdd-stack me-1"></i>
+                Estado del almacenamiento local
+              </h2>
+              <small class="text-muted">
+                Registros por colección y uso aproximado de LocalStorage.
+              </small>
+            </div>
+            <button id="btnRefrescarStats" class="btn btn-outline-secondary btn-sm" type="button">
+              <i class="bi bi-arrow-clockwise me-1"></i>Refrescar
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-3">
+                <div class="card cc-metric-card h-100">
+                  <div class="card-body">
+                    <p class="text-muted small mb-1">Versión de esquema</p>
+                    <h3 id="statVersion" class="h5 mb-0 fw-bold">—</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-3">
+                <div class="card cc-metric-card h-100">
+                  <div class="card-body">
+                    <p class="text-muted small mb-1">Semilla cargada</p>
+                    <h3 id="statSeed" class="h5 mb-0 fw-bold">—</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-3">
+                <div class="card cc-metric-card h-100">
+                  <div class="card-body">
+                    <p class="text-muted small mb-1">Último respaldo</p>
+                    <h3 id="statLastBackup" class="h6 mb-0 fw-bold">—</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-3">
+                <div class="card cc-metric-card h-100">
+                  <div class="card-body">
+                    <p class="text-muted small mb-1">Uso aproximado</p>
+                    <h3 id="statSize" class="h5 mb-0 fw-bold">—</h3>
+                    <small id="statSizeBar" class="text-muted d-block mt-1">—</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Colección</th>
+                    <th class="text-end">Registros</th>
+                    <th class="text-end">Tamaño aprox.</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaColecciones">
+                  <tr><td colspan="3" class="text-center text-muted py-3">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exportar -->
+        <div class="card mb-4">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">
+              <i class="bi bi-download me-1"></i>
+              Exportar respaldo
+            </h2>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted">
+              Genera un archivo JSON con todas las colecciones, configuración y contadores.
+              Guárdelo en un lugar seguro. Podrá importarlo después en este mismo navegador
+              u otro donde instale el prototipo.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <button id="btnExportar" class="btn cc-btn-primary btn-sm" type="button">
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>Descargar respaldo JSON
+              </button>
+              <button id="btnCopiarRespaldo" class="btn btn-outline-secondary btn-sm" type="button">
+                <i class="bi bi-clipboard me-1"></i>Copiar al portapapeles
+              </button>
+              <button id="btnVistaPrevia" class="btn btn-outline-secondary btn-sm" type="button">
+                <i class="bi bi-eye me-1"></i>Vista previa del JSON
+              </button>
+            </div>
+
+            <div id="exportResultado" class="alert alert-info d-none small mb-0" role="alert"></div>
+
+            <pre id="jsonPreview" class="bg-light border rounded p-3 small d-none mt-3" style="max-height: 320px; overflow: auto;"></pre>
+          </div>
+        </div>
+
+        <!-- Importar -->
+        <div class="card mb-4">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">
+              <i class="bi bi-upload me-1"></i>
+              Importar respaldo
+            </h2>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted">
+              Seleccione un archivo JSON exportado previamente. El sistema validará la estructura
+              antes de importar. Puede elegir reemplazar todos los datos actuales o fusionarlos
+              con los existentes.
+            </p>
+
+            <div class="row g-3 align-items-end">
+              <div class="col-12 col-md-6">
+                <label for="importFile" class="form-label small">Archivo JSON *</label>
+                <input type="file" id="importFile" class="form-control form-control-sm" accept=".json,application/json">
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label for="importModo" class="form-label small">Modo de importación</label>
+                <select id="importModo" class="form-select form-select-sm">
+                  <option value="reemplazar">Reemplazar datos actuales</option>
+                  <option value="fusionar">Fusionar con datos actuales</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-3 d-flex gap-2">
+                <button id="btnValidarImport" class="btn btn-outline-primary btn-sm flex-grow-1" type="button">
+                  <i class="bi bi-shield-check me-1"></i>Validar
+                </button>
+                <button id="btnImportar" class="btn cc-btn-primary btn-sm flex-grow-1" type="button" disabled>
+                  <i class="bi bi-box-arrow-in-down me-1"></i>Importar
+                </button>
+              </div>
+            </div>
+
+            <div id="importResultado" class="alert alert-info d-none small mt-3 mb-0" role="alert"></div>
+          </div>
+        </div>
+
+        <!-- Semilla y restablecer -->
+        <div class="card mb-4">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">
+              <i class="bi bi-recycle me-1"></i>
+              Datos semilla y restablecimiento
+            </h2>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted">
+              Estas acciones son para demostración académica y recuperación del prototipo.
+              El restablecimiento borra todos los datos locales. Exporte un respaldo antes
+              de ejecutarlo si desea conservar la información actual.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <button id="btnCargarSemilla" class="btn btn-outline-success btn-sm" type="button">
+                <i class="bi bi-database-add me-1"></i>Cargar datos semilla (forzar)
+              </button>
+              <button id="btnRestablecer" class="btn btn-outline-danger btn-sm" type="button">
+                <i class="bi bi-exclamation-triangle me-1"></i>Restablecer sistema
+              </button>
+            </div>
+
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="keepSessionCheck" checked>
+              <label class="form-check-label small" for="keepSessionCheck">
+                Mantener sesión activa al restablecer (evita cerrar sesión automáticamente)
+              </label>
+            </div>
+
+            <div id="semillaResultado" class="alert alert-info d-none small mb-0" role="alert"></div>
+          </div>
+        </div>
+
+        <!-- Bitácora -->
+        <div class="card">
+          <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold">
+                <i class="bi bi-list-check me-1"></i>
+                Bitácora de acciones
+              </h2>
+              <small class="text-muted">
+                Registro de movimientos del sistema para trazabilidad académica.
+              </small>
+            </div>
+            <button id="btnImprimirBitacora" class="btn btn-outline-secondary btn-sm" type="button">
+              <i class="bi bi-printer me-1"></i>Imprimir
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="row g-2 mb-3">
+              <div class="col-12 col-md-3">
+                <label for="bitBusqueda" class="form-label small">Buscar</label>
+                <input type="text" id="bitBusqueda" class="form-control form-control-sm" placeholder="Acción, entidad, detalle o ID">
+              </div>
+              <div class="col-12 col-md-3">
+                <label for="bitFiltroEntidad" class="form-label small">Entidad</label>
+                <select id="bitFiltroEntidad" class="form-select form-select-sm">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-3">
+                <label for="bitFiltroAccion" class="form-label small">Acción</label>
+                <select id="bitFiltroAccion" class="form-select form-select-sm">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-2">
+                <label for="bitFiltroUsuario" class="form-label small">Usuario</label>
+                <select id="bitFiltroUsuario" class="form-select form-select-sm">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-1 d-flex align-items-end">
+                <button id="btnLimpiarBitacora" class="btn btn-outline-secondary btn-sm w-100" type="button">
+                  <i class="bi bi-funnel"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Entidad</th>
+                    <th>Registro</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaBitacora">
+                  <tr><td colspan="7" class="text-center text-muted py-4">Cargando bitácora...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="small text-muted mt-2 mb-0" id="bitacoraResumen">—</p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="container my-5"><div class="alert alert-warning">Este prototipo necesita JavaScript habilitado.</div></div>
+  </noscript>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+
+  <script src="./js/config.js" defer></script>
+  <script src="./js/utils.js" defer></script>
+  <script src="./js/storage.js" defer></script>
+  <script src="./js/data/seed.js" defer></script>
+  <script src="./js/modules/bitacora.js" defer></script>
+  <script src="./js/auth.js" defer></script>
+  <script src="./js/layout.js" defer></script>
+  <script src="./js/app.js" defer></script>
+  <script src="./js/modules/respaldo.js" defer></script>
+</body>
+</html>

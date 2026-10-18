@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas Claras – Ayuda y manual</title>
+  <meta name="description" content="Manual de usuario, glosario contable, límites legales y preguntas frecuentes del prototipo Cuentas Claras.">
+
+  <!-- Bootstrap 5 por CDN -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Bootstrap Icons por CDN -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+
+  <!-- Estilos propios -->
+  <link href="./css/styles.css" rel="stylesheet">
+  <link href="./css/print.css" rel="stylesheet">
+</head>
+<body data-page="ayuda" data-auth="true">
+
+  <div class="cc-app-shell">
+
+    <!-- Barra lateral -->
+    <aside id="ccSidebar" class="cc-sidebar">
+      <div class="cc-sidebar-brand">
+        <div class="cc-brand-mark small-mark">
+          <i class="bi bi-journal-check"></i>
+        </div>
+        <div>
+          <strong>Cuentas Claras</strong>
+          <small class="d-block text-white-50">
+            Gestión contable digital
+          </small>
+        </div>
+      </div>
+
+      <nav id="ccSidebarMenu" class="cc-sidebar-menu"></nav>
+
+      <div class="cc-sidebar-footer">
+        <small class="text-white-50">
+          Prototipo académico · LocalStorage
+        </small>
+      </div>
+    </aside>
+
+    <div id="ccSidebarBackdrop" class="cc-sidebar-backdrop d-none"></div>
+
+    <!-- Zona principal -->
+    <div class="cc-main">
+
+      <!-- Barra superior -->
+      <header id="ccTopbar" class="cc-topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button
+            id="ccMobileToggle"
+            class="btn btn-light btn-sm cc-mobile-only"
+            type="button"
+            aria-label="Abrir menú"
+          >
+            <i class="bi bi-list"></i>
+          </button>
+
+          <div>
+            <h1 class="h5 mb-0 fw-semibold">
+              Ayuda y manual
+            </h1>
+            <small class="text-muted d-none d-md-block">
+              Guía operativa, glosario contable y límites legales del prototipo
+            </small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span id="ccUserName" class="small text-muted d-none d-md-inline">
+            Usuario
+          </span>
+          <button
+            id="ccLogoutButton"
+            class="btn btn-outline-danger btn-sm"
+            type="button"
+          >
+            <i class="bi bi-box-arrow-right me-1"></i>
+            Salir
+          </button>
+        </div>
+      </header>
+
+      <!-- Contenido -->
+      <main class="cc-content">
+
+        <div class="alert alert-warning small mb-4">
+          <strong>Aviso profesional permanente:</strong>
+          Cuentas Claras es un prototipo académico de apoyo contable, documental, tributario preventivo
+          y educativo para microempresas comerciales. No sustituye la firma, certificación, auditoría,
+          dictamen, representación formal ni cualquier otra actuación profesional reservada a un
+          Contador Público Autorizado cuando la normativa boliviana lo exija.
+        </div>
+
+        <div class="card mb-4 no-print cc-help-controls" id="ayudaControls">
+          <div class="card-header bg-white d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold">
+                Buscar en la ayuda
+              </h2>
+              <small class="text-muted">
+                Escriba un término como: libro diario, balance, IVA, alerta, respaldo, cierre, LocalStorage.
+              </small>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge bg-secondary align-self-center" id="ayudaVersion">
+                v0.2.0
+              </span>
+
+              <button
+                id="btnCopiarAviso"
+                class="btn btn-outline-secondary btn-sm"
+                type="button"
+              >
+                <i class="bi bi-clipboard me-1"></i>
+                Copiar aviso
+              </button>
+
+              <button
+                id="btnImprimirAyuda"
+                class="btn btn-outline-secondary btn-sm"
+                type="button"
+              >
+                <i class="bi bi-printer me-1"></i>
+                Imprimir ayuda
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <label for="ayudaBusqueda" class="form-label small">
+              Tema o palabra clave
+            </label>
+            <input
+              type="text"
+              id="ayudaBusqueda"
+              class="form-control"
+              placeholder="Ejemplo: cómo cerrar un periodo, qué es balanza, límite de LocalStorage"
+            >
+
+            <div
+              id="ayudaAlerta"
+              class="alert alert-info d-none mt-3 mb-0 small"
+              role="alert"
+            ></div>
+          </div>
+        </div>
+
+        <div class="cc-report-header d-none d-print-block mb-3">
+          <h2 class="cc-report-title h4 mb-1">
+            Manual de usuario y límites legales – Cuentas Claras
+          </h2>
+          <p class="small mb-0">
+            Prototipo académico de Contabilidad · Trinidad, Beni, Bolivia · 2026
+          </p>
+        </div>
+
+        <div class="accordion" id="ayudaAccordion">
+
+          <!-- Inicio rápido -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaInicio"
+                aria-expanded="true"
+                aria-controls="ayudaInicio"
+              >
+                <i class="bi bi-rocket-takeoff me-2"></i>
+                1. Inicio rápido
+              </button>
+            </h2>
+            <div id="ayudaInicio" class="accordion-collapse collapse show" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <p class="mb-2">
+                  Este prototipo está pensado para que un microempresario o un estudiante de contabilidad
+                  pueda registrar operaciones, controlar documentos, calcular impuestos informativos,
+                  llevar el ciclo contable simplificado y generar reportes comprensibles.
+                </p>
+
+                <h3 class="h6 fw-semibold mt-3">Flujo recomendado</h3>
+                <ol class="mb-0">
+                  <li>Iniciar sesión con usuario demo.</li>
+                  <li>Crear o seleccionar un cliente microempresario.</li>
+                  <li>Abrir un periodo contable mensual.</li>
+                  <li>Registrar documentos de respaldo.</li>
+                  <li>Registrar transacciones: ventas, compras, gastos e ingresos.</li>
+                  <li>Calcular impuestos informativos.</li>
+                  <li>Generar asientos automáticos en el Libro Diario.</li>
+                  <li>Registrar ajustes si corresponde.</li>
+                  <li>Revisar Libro Mayor y Balanza.</li>
+                  <li>Emitir Estados Financieros simplificados.</li>
+                  <li>Revisar costos, rentabilidad e indicadores.</li>
+                  <li>Generar alertas y reporte mensual.</li>
+                  <li>Exportar respaldo JSON.</li>
+                  <li>Cerrar el periodo contable cuando todo esté conforme.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ciclo contable -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaCiclo"
+                aria-expanded="false"
+                aria-controls="ayudaCiclo"
+              >
+                <i class="bi bi-diagram-3 me-2"></i>
+                2. Ciclo contable completo del prototipo
+              </button>
+            </h2>
+            <div id="ayudaCiclo" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <p>
+                  Cuentas Claras implementa un ciclo contable simplificado para microempresa comercial.
+                  La lógica es la siguiente:
+                </p>
+
+                <div class="table-responsive">
+                  <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Paso</th>
+                        <th>Módulo</th>
+                        <th>Qué hace</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>1</td>
+                        <td>Clientes</td>
+                        <td>Registra al microempresario, su régimen tributario y datos de contacto.</td>
+                      </tr>
+                      <tr>
+                        <td>2</td>
+                        <td>Periodos</td>
+                        <td>Controla el mes contable abierto, en revisión o cerrado.</td>
+                      </tr>
+                      <tr>
+                        <td>3</td>
+                        <td>Documentos</td>
+                        <td>Guarda respaldo documental: facturas, recibos, notas, extractos.</td>
+                      </tr>
+                      <tr>
+                        <td>4</td>
+                        <td>Transacciones</td>
+                        <td>Registra la operación económica como documento fuente.</td>
+                      </tr>
+                      <tr>
+                        <td>5</td>
+                        <td>Impuestos</td>
+                        <td>Calcula IVA e IT de forma informativa y genera obligaciones preventivas.</td>
+                      </tr>
+                      <tr>
+                        <td>6</td>
+                        <td>Libro Diario</td>
+                        <td>Convierte transacciones en asientos de doble entrada.</td>
+                      </tr>
+                      <tr>
+                        <td>7</td>
+                        <td>Libro Mayor</td>
+                        <td>Clasifica movimientos por cuenta y muestra saldo corrido.</td>
+                      </tr>
+                      <tr>
+                        <td>8</td>
+                        <td>Balanza</td>
+                        <td>Verifica débitos, créditos y saldos antes y después de ajustes.</td>
+                      </tr>
+                      <tr>
+                        <td>9</td>
+                        <td>Ajustes</td>
+                        <td>Registra depreciación, devengados, provisiones, reclasificaciones e inventario.</td>
+                      </tr>
+                      <tr>
+                        <td>10</td>
+                        <td>Estados Financieros</td>
+                        <td>Emite Estado de Resultados y Balance simplificados.</td>
+                      </tr>
+                      <tr>
+                        <td>11</td>
+                        <td>Cierre</td>
+                        <td>Genera asientos de cierre y bloquea el periodo.</td>
+                      </tr>
+                      <tr>
+                        <td>12</td>
+                        <td>Costos e indicadores</td>
+                        <td>Muestra margen, punto de equilibrio, liquidez, endeudamiento y rentabilidad.</td>
+                      </tr>
+                      <tr>
+                        <td>13</td>
+                        <td>Alertas</td>
+                        <td>Avisa vencimientos, documentos pendientes, transacciones sin asiento y descuadres.</td>
+                      </tr>
+                      <tr>
+                        <td>14</td>
+                        <td>Reportes</td>
+                        <td>Entrega resumen mensual en lenguaje sencillo.</td>
+                      </tr>
+                      <tr>
+                        <td>15</td>
+                        <td>Respaldo</td>
+                        <td>Exporta, importa, restaura semilla y muestra bitácora.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="alert alert-info small mb-0 mt-3">
+                  <strong>Regla de oro:</strong>
+                  el Libro Diario es la fuente principal. El Mayor, la Balanza, los Estados Financieros
+                  y los indicadores se derivan de los asientos vigentes. No se editan saldos a mano.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clientes -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaClientes"
+                aria-expanded="false"
+                aria-controls="ayudaClientes"
+              >
+                <i class="bi bi-shop me-2"></i>
+                3. Clientes
+              </button>
+            </h2>
+            <div id="ayudaClientes" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Objetivo</h3>
+                <p>
+                  Registrar a los microempresarios clientes del servicio contable.
+                </p>
+
+                <h3 class="h6 fw-semibold">Campos importantes</h3>
+                <ul>
+                  <li><strong>Nombre comercial:</strong> cómo se conoce el negocio.</li>
+                  <li><strong>Razón social o nombre del propietario:</strong> identificación personal o jurídica.</li>
+                  <li><strong>NIT:</strong> si ya está formalizado.</li>
+                  <li><strong>Régimen tributario:</strong> Régimen General o Régimen Simplificado.</li>
+                  <li><strong>Capital inicial:</strong> base para patrimonio de apertura.</li>
+                  <strong>Costos fijos mensuales:</strong> usados para punto de equilibrio estimado.</li>
+                  <li><strong>WhatsApp/teléfono:</strong> usados para alertas.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Buenas prácticas</h3>
+                <ul>
+                  <li>No elimine clientes con historial; desactívelos.</li>
+                  <li>Verifique el régimen tributario antes de calcular impuestos.</li>
+                  <li>Complete teléfono o WhatsApp si desea enviar alertas preventivas.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Periodos -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaPeriodos"
+                aria-expanded="false"
+                aria-controls="ayudaPeriodos"
+              >
+                <i class="bi bi-calendar3 me-2"></i>
+                4. Periodos contables
+              </button>
+            </h2>
+            <div id="ayudaPeriodos" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Estados</h3>
+                <ul>
+                  <li><strong>Abierto:</strong> se puede capturar información.</li>
+                  <li><strong>En revisión:</strong> se está conciliando o validando.</li>
+                  <li><strong>Cerrado:</strong> no se admiten nuevos registros ni ediciones.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Reglas</h3>
+                <ul>
+                  <li>Un cliente no debe tener dos periodos abiertos del mismo mes y año.</li>
+                  <li>Antes de cerrar, revise documentos, transacciones, asientos, ajustes, balanza y EE.FF.</li>
+                  <li>El cierre contable genera asiento de tipo <code>cierre</code>.</li>
+                  <li>Reabrir un periodo anula el asiento de cierre y queda en bitácora.</li>
+                </ul>
+
+                <div class="alert alert-warning small mb-0">
+                  Si un periodo está cerrado, el sistema bloqueará nuevos documentos, transacciones y asientos.
+                  Eso protege la integridad del cierre contable.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Documentos -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaDocumentos"
+                aria-expanded="false"
+                aria-controls="ayudaDocumentos"
+              >
+                <i class="bi bi-file-earmark-text me-2"></i>
+                5. Documentos
+              </button>
+            </h2>
+            <div id="ayudaDocumentos" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Tipos</h3>
+                <ul>
+                  <li>Factura de venta.</li>
+                  <li>Factura de compra.</li>
+                  <li>Recibo.</li>
+                  <li>Nota.</li>
+                  <li>Extracto bancario.</li>
+                  <li>Otro documento.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Estados</h3>
+                <ul>
+                  <li><strong>Pendiente:</strong> falta validar.</li>
+                  <li><strong>Recibido:</strong> ya está en poder del contador o usuario.</li>
+                  <li><strong>Validado:</strong> apto para sustentar operación.</li>
+                  <li><strong>Rechazado:</strong> no procede o está incompleto.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Importante</h3>
+                <p class="mb-0">
+                  Los documentos son respaldo contable y tributario. En el prototipo, el campo de archivo
+                  queda previsto, pero no se deben guardar imágenes grandes en LocalStorage.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transacciones -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaTransacciones"
+                aria-expanded="false"
+                aria-controls="ayudaTransacciones"
+              >
+                <i class="bi bi-cash-coin me-2"></i>
+                6. Transacciones
+              </button>
+            </h2>
+            <div id="ayudaTransacciones" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Tipos</h3>
+                <ul>
+                  <li><strong>Venta:</strong> ingreso por operación.</li>
+                  <li><strong>Compra:</strong> adquisición de mercancía o servicio relacionado con costo.</li>
+                  <li><strong>Gasto:</strong> erogación operativa.</li>
+                  <li><strong>Ingreso:</strong> otro ingreso operativo o aporte si se clasifica correctamente.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Regla contable</h3>
+                <p>
+                  El monto registrado es la base imponible. El IVA se desglosa en el asiento automático
+                  solo si el cliente está en Régimen General.
+                </p>
+
+                <h3 class="h6 fw-semibold">Anulación</h3>
+                <p class="mb-0">
+                  Las transacciones no se borran físicamente. Se anulan para mantener trazabilidad.
+                  Si una transacción anulada tenía asiento, el asiento también debe anularse o regenerarse.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Impuestos -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaImpuestos"
+                aria-expanded="false"
+                aria-controls="ayudaImpuestos"
+              >
+                <i class="bi bi-percent me-2"></i>
+                7. Impuestos y obligaciones
+              </button>
+            </h2>
+            <div id="ayudaImpuestos" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Cálculo informativo</h3>
+                <ul>
+                  <li>IVA: 13% referencial.</li>
+                  <li>IT: 3% referencial.</li>
+                  <li>Vencimiento demo: día 20 del mes siguiente.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Régimen General</h3>
+                <ul>
+                  <li>Calcula IVA débito fiscal.</li>
+                  <li>Calcula IVA crédito fiscal.</li>
+                  <li>Calcula IVA por pagar si débito supera crédito.</li>
+                  <li>Calcula IT estimado.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Régimen Simplificado</h3>
+                <ul>
+                  <li>No desglosa IVA en el prototipo.</li>
+                  <li>Calcula IT estimado sobre ventas.</li>
+                </ul>
+
+                <div class="alert alert-danger small mb-0">
+                  <strong>Aviso SIN:</strong>
+                  el cálculo es preventivo e informativo. No constituye declaración automática ante el
+                  Servicio de Impuestos Nacionales.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Libro Diario -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaDiario"
+                aria-expanded="false"
+                aria-controls="ayudaDiario"
+              >
+                <i class="bi bi-journal-bookmark me-2"></i>
+                8. Libro Diario
+              </button>
+            </h2>
+            <div id="ayudaDiario" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Función</h3>
+                <p>
+                  Registra asientos de doble entrada derivados de transacciones o capturados manualmente.
+                </p>
+
+                <h3 class="h6 fw-semibold">Asiento automático</h3>
+                <p>
+                  Al pulsar “Generar asientos automáticos”, el sistema toma transacciones activas sin asiento
+                  y crea débitos y créditos según tipo, régimen y forma de pago.
+                </p>
+
+                <h3 class="h6 fw-semibold">Asiento manual</h3>
+                <p>
+                  Sirve para apertura, correcciones, aportes de capital, ajustes especiales u operaciones
+                  no capturadas como transacción. Debe cuadrar: Σ débitos = Σ créditos.
+                </p>
+
+                <h3 class="h6 fw-semibold">Anulación</h3>
+                <p class="mb-0">
+                  Un asiento no se elimina. Se anula y queda trazabilidad. Si era automático, la transacción
+                  queda sin asiento para poder regenerarlo.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Libro Mayor -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaMayor"
+                aria-expanded="false"
+                aria-controls="ayudaMayor"
+              >
+                <i class="bi bi-journal-text me-2"></i>
+                9. Libro Mayor
+              </button>
+            </h2>
+            <div id="ayudaMayor" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Función</h3>
+                <p>
+                  Clasifica analíticamente los movimientos por cuenta contable.
+                </p>
+
+                <h3 class="h6 fw-semibold">Cómo se calcula</h3>
+                <ul>
+                  <li>Saldo inicial: arrastre de periodos anteriores.</li>
+                  <li>Débitos y créditos del periodo.</li>
+                  <li>Saldo final según naturaleza de cuenta.</li>
+                  <li>Ficha de cuenta con saldo corrido por movimiento.</li>
+                </ul>
+
+                <div class="alert alert-info small mb-0">
+                  El Mayor no se guarda como tabla aparte. Se calcula en vivo desde las líneas del Libro Diario.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Balanza -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaBalanza"
+                aria-expanded="false"
+                aria-controls="ayudaBalanza"
+              >
+                <i class="bi bi-list-columns me-2"></i>
+                10. Balanza de comprobación y ajustada
+              </button>
+            </h2>
+            <div id="ayudaBalanza" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Balanza de comprobación</h3>
+                <p>
+                  Muestra débitos, créditos y saldos antes de ajustes. Excluye asientos de tipo ajuste y cierre.
+                </p>
+
+                <h3 class="h6 fw-semibold">Balanza ajustada</h3>
+                <p>
+                  Incluye ajustes del periodo. Es la base para Estados Financieros.
+                </p>
+
+                <h3 class="h6 fw-semibold">Cuadratura</h3>
+                <ul>
+                  <li>Movimientos: total débitos debe igualar total créditos.</li>
+                  <li>Saldos: total saldo deudor debe igualar total saldo acreedor.</li>
+                </ul>
+
+                <div class="alert alert-warning small mb-0">
+                  Si la balanza descuadra, revise asientos del Diario, cuentas sin naturaleza correcta
+                  o datos importados inconsistentes.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ajustes -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaAjustes"
+                aria-expanded="false"
+                aria-controls="ayudaAjustes"
+              >
+                <i class="bi bi-tools me-2"></i>
+                11. Ajustes contables
+              </button>
+            </h2>
+            <div id="ayudaAjustes" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Categorías</h3>
+                <ul>
+                  <li>Depreciación.</li>
+                  <li>Amortización.</li>
+                  <li>Provisión.</li>
+                  <li>Devengado.</li>
+                  <li>Reclasificación.</li>
+                  <li>Inventario inicial/final.</li>
+                  <li>Otro ajuste.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Depreciación</h3>
+                <p>
+                  El prototipo usa método lineal simple:
+                </p>
+                <code>
+                  depreciación mensual = (costo - valor residual) / vida útil en meses
+                </code>
+
+                <p class="mb-0">
+                  El sistema evita depreciar dos veces el mismo activo en el mismo periodo.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estados Financieros -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaEEFF"
+                aria-expanded="false"
+                aria-controls="ayudaEEFF"
+              >
+                <i class="bi bi-graph-up-arrow me-2"></i>
+                12. Estados Financieros y cierre
+              </button>
+            </h2>
+            <div id="ayudaEEFF" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Estado de Resultados simplificado</h3>
+                <p>
+                  Muestra ventas, otros ingresos, costo de ventas, utilidad bruta, gastos operativos,
+                  utilidad operativa, IT estimado informativo y utilidad neta.
+                </p>
+
+                <h3 class="h6 fw-semibold">Balance General simplificado</h3>
+                <p>
+                  Muestra activo corriente, activo no corriente, pasivo corriente, pasivo no corriente,
+                  capital, resultados acumulados y resultado del periodo.
+                </p>
+
+                <h3 class="h6 fw-semibold">Verificación</h3>
+                <p>
+                  Activo debe ser igual a Pasivo + Patrimonio.
+                </p>
+
+                <h3 class="h6 fw-semibold">Cierre contable</h3>
+                <ul>
+                  <li>Genera asiento de tipo <code>cierre</code>.</li>
+                  <li>Cierra cuentas temporales contra Resultados del ejercicio.</li>
+                  <li>Traslada resultado a Resultados acumulados.</li>
+                  <li>Marca el periodo como cerrado.</li>
+                </ul>
+
+                <div class="alert alert-info small mb-0">
+                  Los EE.FF. vivos excluyen asientos de cierre para que se sigan viendo ingresos, costos y gastos
+                  del periodo. El snapshot guarda evidencia del momento de emisión.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Costos -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaCostos"
+                aria-expanded="false"
+                aria-controls="ayudaCostos"
+              >
+                <i class="bi bi-clipboard-data me-2"></i>
+                13. Costos, rentabilidad e indicadores
+              </button>
+            </h2>
+            <div id="ayudaCostos" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Métricas</h3>
+                <ul>
+                  <li>Margen bruto.</li>
+                  <li>Margen operativo.</li>
+                  <li>Margen neto.</li>
+                  <li>Punto de equilibrio contable.</li>
+                  <li>Punto de equilibrio estimado.</li>
+                  <li>Liquidez corriente.</li>
+                  <li>Endeudamiento.</li>
+                  <li>ROE simplificado.</li>
+                  <li>Rotación de inventario y cuentas por cobrar, si es calculable.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Alcance</h3>
+                <p class="mb-0">
+                  Para microempresa comercial, el prototipo maneja costos agregados por cuenta, no costo por ítem.
+                  El Kardex se declara como proyección, no como requisito del MVP.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alertas -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaAlertas"
+                aria-expanded="false"
+                aria-controls="ayudaAlertas"
+              >
+                <i class="bi bi-bell me-2"></i>
+                14. Alertas
+              </button>
+            </h2>
+            <div id="ayudaAlertas" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Tipos</h3>
+                <ul>
+                  <li>Vencimiento tributario próximo o vencido.</li>
+                  <li>Documento pendiente.</li>
+                  <li>Periodo sin cerrar.</li>
+                  <li>Transacción sin documento.</li>
+                  <li>Transacción sin asiento.</li>
+                  <li>Impuesto no calculado.</li>
+                  <li>Balanza descuadrada.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Estados</h3>
+                <ul>
+                  <li>Pendiente.</li>
+                  <li>Vista.</li>
+                  <li>Resuelta.</li>
+                  <li>Vencida.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">WhatsApp</h3>
+                <p class="mb-0">
+                  El sistema puede copiar el mensaje o abrir un enlace <code>wa.me</code> con prefijo Bolivia 591.
+                  Esto es preventivo y no reemplaza notificación formal.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reportes -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaReportes"
+                aria-expanded="false"
+                aria-controls="ayudaReportes"
+              >
+                <i class="bi bi-file-earmark-bar-graph me-2"></i>
+                15. Reporte mensual
+              </button>
+            </h2>
+            <div id="ayudaReportes" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Contenido</h3>
+                <ul>
+                  <li>Resumen en lenguaje sencillo.</li>
+                  <li>Ingresos, costos, gastos y utilidad.</li>
+                  <li>Impuestos informativos.</li>
+                  <li>Situación financiera simplificada.</li>
+                  <li>Indicadores y punto de equilibrio.</li>
+                  <li>Alertas pendientes.</li>
+                  <li>Recomendaciones y próximo paso.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Fuentes</h3>
+                <p class="mb-0">
+                  Si el motor contable está disponible, el reporte usa datos contables.
+                  Si no, usa datos operativos desde transacciones e impuestos.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Respaldo -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaRespaldo"
+                aria-expanded="false"
+                aria-controls="ayudaRespaldo"
+              >
+                <i class="bi bi-hdd-stack me-2"></i>
+                16. Respaldo y bitácora
+              </button>
+            </h2>
+            <div id="ayudaRespaldo" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Exportar</h3>
+                <p>
+                  Genera un archivo JSON con todas las colecciones, configuración y contadores.
+                </p>
+
+                <h3 class="h6 fw-semibold">Importar</h3>
+                <p>
+                  Permite reemplazar o fusionar datos. Valida estructura antes de importar.
+                </p>
+
+                <h3 class="h6 fw-semibold">Semilla</h3>
+                <p>
+                  Carga datos de demostración. Útil para prueba académica, pero reemplaza información actual.
+                </p>
+
+                <h3 class="h6 fw-semibold">Restablecer</h3>
+                <p>
+                  Borra datos locales. Pide confirmación escrita REINICIAR.
+                </p>
+
+                <h3 class="h6 fw-semibold">Bitácora</h3>
+                <p class="mb-0">
+                  Registra acciones relevantes para trazabilidad académica.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Límites legales -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaLimites"
+                aria-expanded="false"
+                aria-controls="ayudaLimites"
+              >
+                <i class="bi bi-shield-exclamation me-2"></i>
+                17. Límites legales y profesionales
+              </button>
+            </h2>
+            <div id="ayudaLimites" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Qué NO hace este sistema</h3>
+                <ul>
+                  <li>No declara automáticamente ante el Servicio de Impuestos Nacionales.</li>
+                  <li>No sustituye la firma de un Contador Público Autorizado.</li>
+                  <li>No realiza auditoría ni dictamen profesional.</li>
+                  <li>No reemplaza representación formal ante entidades públicas o privadas.</li>
+                  <li>No garantiza validez legal de estados financieros sin intervención profesional cuando la norma lo exija.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Qué SÍ hace</h3>
+                <ul>
+                  <li>Apoya el registro contable simplificado.</li>
+                  <li>Controla documentos de respaldo.</li>
+                  <li>Calcula impuestos informativos y preventivos.</li>
+                  <li>Genera alertas para reducir riesgos.</li>
+                  <li>Emit reportes formativos para el microempresario.</li>
+                  <li>Demuestra un ciclo contable computarizado académico.</li>
+                </ul>
+
+                <div class="alert alert-warning small mb-0">
+                  <strong>Texto sugerido para defensa académica:</strong>
+                  “El sistema es una herramienta de apoyo contable digital. Los cálculos tributarios y estados
+                  financieros son informativos, preventivos y formativos. La responsabilidad profesional formal
+                  corresponde al Contador Público Autorizado cuando la normativa boliviana lo exija.”
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LocalStorage -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaLocalStorage"
+                aria-expanded="false"
+                aria-controls="ayudaLocalStorage"
+              >
+                <i class="bi bi-database-exclamation me-2"></i>
+                18. Límites de LocalStorage y protección de datos
+              </button>
+            </h2>
+            <div id="ayudaLocalStorage" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">Limitaciones</h3>
+                <ul>
+                  <li>Los datos se guardan solo en el navegador actual.</li>
+                  <li>No se sincronizan entre celulares, computadoras o navegadores distintos.</li>
+                  <li>Si se borran datos del navegador, se pierde la información.</li>
+                  <li>El límite aproximado suele ser alrededor de 5 MB por dominio.</li>
+                  <li>No es un sistema productivo en la nube.</li>
+                  <li>No sustituye una base de datos segura con autenticación server-side.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Buenas prácticas</h3>
+                <ul>
+                  <li>Exportar respaldo JSON periódicamente.</li>
+                  <li>No compartir respaldos sin autorización.</li>
+                  <li>Eliminar datos de prueba que contengan información real.</li>
+                  <li>Usar el prototipo en equipos seguros.</li>
+                  <li>Solicitar autorización del cliente para tratamiento de datos.</li>
+                </ul>
+
+                <h3 class="h6 fw-semibold">Proyección productiva</h3>
+                <p class="mb-0">
+                  Para una implementación real se prevé migrar a base de datos relacional, backend seguro,
+                  autenticación real, roles y permisos, respaldos en la nube, cifrado adecuado y control de accesos.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Glosario -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaGlosario"
+                aria-expanded="false"
+                aria-controls="ayudaGlosario"
+              >
+                <i class="bi bi-book me-2"></i>
+                19. Glosario contable básico
+              </button>
+            </h2>
+            <div id="ayudaGlosario" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <div class="table-responsive">
+                  <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Término</th>
+                        <th>Explicación sencilla</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Activo</td><td>Bienes o derechos que tiene el negocio, como caja, bancos, inventario o clientes por cobrar.</td></tr>
+                      <tr><td>Pasivo</td><td>Deudas u obligaciones con terceros, como proveedores, impuestos por pagar o préstamos.</td></tr>
+                      <tr><td>Patrimonio</td><td>Lo que realmente pertenece al dueño: capital aportado más utilidades acumuladas.</td></tr>
+                      <tr><td>Ingreso</td><td>Aumento económico, principalmente por ventas u otros conceptos operativos.</td></tr>
+                      <tr><td>Costo</td><td>Valor de la mercancía vendida o compras relacionadas con la operación de venta.</td></tr>
+                      <tr><td>Gasto</td><td>Erogación necesaria para operar, como alquiler, servicios, transporte o depreciation.</td></tr>
+                      <tr><td>Débito</td><td>Registro al izquierdo de un asiento. Aumenta activos y gastos; disminuye pasivos, patrimonio e ingresos.</td></tr>
+                      <tr><td>Crédito</td><td>Registro al derecho de un asiento. Aumenta pasivos, patrimonio e ingresos; disminuye activos y gastos.</td></tr>
+                      <tr><td>Libro Diario</td><td>Registro cronológico de operaciones en forma de asientos de doble entrada.</td></tr>
+                      <tr><td>Libro Mayor</td><td>Clasificación de movimientos por cada cuenta contable.</td></tr>
+                      <tr><td>Balanza de comprobación</td><td>Listado de débitos, créditos y saldos para verificar que la contabilidad cuadre.</td></tr>
+                      <tr><td>Ajuste</td><td>Asiento contable que corrige o reconoce situaciones como depreciación, devengados o inventario.</td></tr>
+                      <tr><td>Estado de Resultados</td><td>Informe que muestra si el negocio tuvo utilidad o pérdida en un periodo.</td></tr>
+                      <tr><td>Balance General</td><td>Informe que muestra activo, pasivo y patrimonio a una fecha determinada.</td></tr>
+                      <tr><td>Cierre contable</td><td>Proceso que deja cuentas temporales en cero y traslada el resultado al patrimonio.</td></tr>
+                      <tr><td>Depreciación</td><td>Distribución del costo de un activo fijo a lo largo de su vida útil.</td></tr>
+                      <tr><td>IVA</td><td>Impuesto al Valor Agregado, referencia 13% en el prototipo.</td></tr>
+                      <tr><td>IT</td><td>Impuesto a las Transacciones, referencia 3% en el prototipo.</td></tr>
+                      <tr><td>Régimen General</td><td>Régimen que permite desglosar IVA débito y crédito según normativa.</td></tr>
+                      <tr><td>Régimen Simplificado</td><td>Régimen para pequeños contribuyentes; en el prototipo no desglosa IVA.</td></tr>
+                      <tr><td>Punto de equilibrio</td><td>Nivel de ventas necesario para cubrir costos variables y fijos.</td></tr>
+                      <tr><td>Liquidez corriente</td><td>Capacidad de pagar deudas de corto plazo con activos de corto plazo.</td></tr>
+                      <tr><td>Endeudamiento</td><td>Proporción del activo financiada con deudas.</td></tr>
+                      <tr><td>ROE</td><td>Rentabilidad sobre el patrimonio del dueño.</td></tr>
+                      <tr><td>Margen neto</td><td>Utilidad neta expresada como porcentaje de los ingresos.</td></tr>
+                      <tr><td>Snapshot</td><td>Copia congelada de un cálculo o reporte para evidencia.</td></tr>
+                      <tr><td>Bitácora</td><td>Registro de acciones del sistema para trazabilidad.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- FAQ -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaFAQ"
+                aria-expanded="false"
+                aria-controls="ayudaFAQ"
+              >
+                <i class="bi bi-question-circle me-2"></i>
+                20. Preguntas frecuentes
+              </button>
+            </h2>
+            <div id="ayudaFAQ" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <h3 class="h6 fw-semibold">¿Por qué no puedo editar un periodo cerrado?</h3>
+                <p>
+                  Porque el cierre contable protege la integridad del periodo. Si necesita corregir,
+                  debe reabrir el periodo desde Estados Financieros o Periodos. La acción queda en bitácora.
+                </p>
+
+                <h3 class="h6 fw-semibold">¿Por qué el Libro Mayor está vacío?</h3>
+                <p>
+                  Probablemente no generó asientos automáticos en el Libro Diario. El Mayor se deriva del Diario.
+                </p>
+
+                <h3 class="h6 fw-semibold">¿Por qué la balanza descuadra?</h3>
+                <p>
+                  Revise si hay asientos manuales mal capturados, cuentas sin naturaleza correcta,
+                  datos importados inconsistentes o líneas sin débito/crédito válido.
+                </p>
+
+                <h3 class="h6 fw-semibold">¿Por qué el balance no cuadra?</h3>
+                <p>
+                  Verifique que haya generado asientos automáticos, que los ajustes curen,
+                  que el IT informativo esté considerado y que no haya cuentas temporales mal clasificadas.
+                </p>
+
+                <h3 class="h6 fw-semibold">¿Puedo usar el sistema en celular?</h3>
+                <p>
+                  Sí, pero los datos se guardan solo en ese navegador. Para llevar información entre equipos,
+                  debe exportar e importar respaldo JSON.
+                </p>
+
+                <h3 class="h6 fw-semibold">¿El sistema declara impuestos ante el SIN?</h3>
+                <p>
+                  No. Solo calcula valores informativos y genera obligaciones preventivas.
+                </p>
+
+                <h3 class="h6 fw-semibold">¿Sirve como empresa real?</h3>
+                <p>
+                  Como prototipo académico sí demuestra el ciclo contable. Para producción real requiere
+                  backend, base de datos, seguridad, roles, auditoría, respaldos en la nube y validación legal.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contacto -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#ayudaContacto"
+                aria-expanded="false"
+                aria-controls="ayudaContacto"
+              >
+                <i class="bi bi-person-badge me-2"></i>
+                21. Contacto del proyecto académico
+              </button>
+            </h2>
+            <div id="ayudaContacto" class="accordion-collapse collapse" data-bs-parent="#ayudaAccordion">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Participantes</p>
+                      <strong>Lizi Francia Mansilla Vaca</strong><br>
+                      <strong>Milton Daniel Hipamo Cholima</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Tutora del proyecto</p>
+                      <strong>Lic. Sarita Ignacia</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Facilitador de la especialidad</p>
+                      <strong>Lic. Edgar Aquilino</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Director del C.E.A. Santísima Trinidad</p>
+                      <strong>Lic. Miguel Valencia Mazi</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Centro</p>
+                      <strong>C.E.A. Santísima Trinidad</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Carrera</p>
+                      <strong>Técnico Medio en Contabilidad</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Ubicación</p>
+                      <strong>Trinidad, Beni, Bolivia</strong>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                      <p class="small text-muted mb-1">Año</p>
+                      <strong>2026</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="card border-0 bg-light mt-4">
+          <div class="card-body small text-muted">
+            <p class="fw-semibold mb-1 text-dark">
+              Aviso final del prototipo
+            </p>
+            <p class="mb-0">
+              Cuentas Claras es un modelo de gestión contable digital académico, formativo y preventivo,
+              adaptado a microempresas comerciales de Trinidad, Beni. Implementa un ciclo contable simplificado
+              con control documental, alertas, reportes y respaldo local. No sustituye la actuación profesional
+              reservada a un Contador Público Autorizado cuando la normativa boliviana lo exija.
+            </p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="container my-5">
+      <div class="alert alert-warning">
+        Este prototipo necesita JavaScript habilitado para funcionar.
+      </div>
+    </div>
+  </noscript>
+
+  <!-- Bootstrap Bundle con Popper -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    defer
+  ></script>
+
+  <!-- Scripts del proyecto -->
+  <script src="./js/config.js" defer></script>
+  <script src="./js/utils.js" defer></script>
+  <script src="./js/storage.js" defer></script>
+  <script src="./js/data/seed.js" defer></script>
+  <script src="./js/modules/bitacora.js" defer></script>
+  <script src="./js/auth.js" defer></script>
+  <script src="./js/layout.js" defer></script>
+  <script src="./js/app.js" defer></script>
+  <script src="./js/modules/ayuda.js" defer></script>
+</body>
+</html>

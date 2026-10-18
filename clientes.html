@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas Claras – Clientes</title>
+  <meta name="description" content="Módulo de clientes para microempresas comerciales.">
+
+  <!-- Bootstrap 5 por CDN -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Bootstrap Icons por CDN -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+
+  <!-- Estilos propios -->
+  <link href="./css/styles.css" rel="stylesheet">
+  <link href="./css/print.css" rel="stylesheet">
+</head>
+<body data-page="clientes" data-auth="true">
+
+  <div class="cc-app-shell">
+
+    <!-- Barra lateral -->
+    <aside id="ccSidebar" class="cc-sidebar">
+      <div class="cc-sidebar-brand">
+        <div class="cc-brand-mark small-mark">
+          <i class="bi bi-journal-check"></i>
+        </div>
+        <div>
+          <strong>Cuentas Claras</strong>
+          <small class="d-block text-white-50">
+            Gestión contable digital
+          </small>
+        </div>
+      </div>
+
+      <nav id="ccSidebarMenu" class="cc-sidebar-menu"></nav>
+
+      <div class="cc-sidebar-footer">
+        <small class="text-white-50">
+          Prototipo académico · LocalStorage
+        </small>
+      </div>
+    </aside>
+
+    <div id="ccSidebarBackdrop" class="cc-sidebar-backdrop d-none"></div>
+
+    <!-- Zona principal -->
+    <div class="cc-main">
+
+      <!-- Barra superior -->
+      <header id="ccTopbar" class="cc-topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button
+            id="ccMobileToggle"
+            class="btn btn-light btn-sm cc-mobile-only"
+            type="button"
+            aria-label="Abrir menú"
+          >
+            <i class="bi bi-list"></i>
+          </button>
+
+          <div>
+            <h1 class="h5 mb-0 fw-semibold">
+              Clientes
+            </h1>
+            <small class="text-muted d-none d-md-block">
+              Registro y control de microempresas comerciales
+            </small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span id="ccUserName" class="small text-muted d-none d-md-inline">
+            Usuario
+          </span>
+          <button
+            id="ccLogoutButton"
+            class="btn btn-outline-danger btn-sm"
+            type="button"
+          >
+            <i class="bi bi-box-arrow-right me-1"></i>
+            Salir
+          </button>
+        </div>
+      </header>
+
+      <!-- Contenido -->
+      <main class="cc-content">
+
+        <div class="card mb-4">
+          <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold">
+                Directorio de clientes
+              </h2>
+              <small class="text-muted">
+                Administra las microempresas que reciben apoyo contable digital.
+              </small>
+            </div>
+
+            <button
+              id="btnNuevoCliente"
+              class="btn cc-btn-primary btn-sm"
+              type="button"
+            >
+              <i class="bi bi-plus-lg me-1"></i>
+              Nuevo cliente
+            </button>
+          </div>
+
+          <div class="card-body">
+            <div class="row g-2 mb-3">
+              <div class="col-12 col-md-4">
+                <label for="clienteBusqueda" class="form-label small">
+                  Buscar
+                </label>
+                <input
+                  type="text"
+                  id="clienteBusqueda"
+                  class="form-control form-control-sm"
+                  placeholder="Nombre, NIT, teléfono o dirección"
+                >
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label for="clienteFiltroRegimen" class="form-label small">
+                  Régimen
+                </label>
+                <select
+                  id="clienteFiltroRegimen"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Todos</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label for="clienteFiltroTipo" class="form-label small">
+                  Tipo de negocio
+                </label>
+                <select
+                  id="clienteFiltroTipo"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Todos</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-2">
+                <label for="clienteFiltroEstado" class="form-label small">
+                  Estado
+                </label>
+                <select
+                  id="clienteFiltroEstado"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Todos</option>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mb-3">
+              <button
+                id="btnLimpiarFiltrosClientes"
+                class="btn btn-outline-secondary btn-sm"
+                type="button"
+              >
+                <i class="bi bi-funnel me-1"></i>
+                Limpiar filtros
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre comercial</th>
+                    <th>NIT</th>
+                    <th>Teléfono</th>
+                    <th>Régimen</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaClientes">
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                      Cargando clientes...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 bg-light">
+          <div class="card-body small text-muted">
+            <p class="fw-semibold mb-1 text-dark">
+              Nota contable
+            </p>
+            <p class="mb-0">
+              Los clientes no se eliminan físicamente cuando tienen historial.
+              Se desactivan para preservar trazabilidad, confidencialidad y
+              evidencia académica del modelo de gestión contable digital.
+            </p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal formulario cliente -->
+  <div
+    class="modal fade"
+    id="clienteModal"
+    tabindex="-1"
+    aria-labelledby="clienteModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="clienteModalLabel">
+            Nuevo cliente
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Cerrar"
+          ></button>
+        </div>
+
+        <form id="clienteForm" novalidate>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label for="clienteNombreComercial" class="form-label">
+                  Nombre comercial *
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="clienteNombreComercial"
+                  name="nombreComercial"
+                  placeholder="Ej. Tienda Doña Rosa"
+                  required
+                >
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="clienteRazonSocial" class="form-label">
+                  Razón social o nombre del propietario
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="clienteRazonSocial"
+                  name="razonSocial"
+                  placeholder="Ej. Rosa Mamani"
+                >
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label for="clienteNit" class="form-label">
+                  NIT
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="clienteNit"
+                  name="nit"
+                  placeholder="Ej. 123456789"
+                >
+                <div class="form-text">
+                  Opcional en fase piloto.
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label for="clienteTelefono" class="form-label">
+                  Teléfono *
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="clienteTelefono"
+                  name="telefono"
+                  placeholder="Ej. 70000001"
+                  required
+                >
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label for="clienteWhatsapp" class="form-label">
+                  WhatsApp
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="clienteWhatsapp"
+                  name="whatsapp"
+                  placeholder="Ej. 70000001"
+                >
+              </div>
+
+              <div class="col-12">
+                <label for="clienteDireccion" class="form-label">
+                  Dirección o referencia
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="clienteDireccion"
+                  name="direccion"
+                  placeholder="Ej. Mercado Pompeya, puesto 12"
+                >
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="clienteRegimen" class="form-label">
+                  Régimen tributario *
+                </label>
+                <select
+                  class="form-select"
+                  id="clienteRegimen"
+                  name="regimenTributario"
+                  required
+                >
+                  <option value="">Seleccione...</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="clienteTipoNegocio" class="form-label">
+                  Tipo de negocio *
+                </label>
+                <select
+                  class="form-select"
+                  id="clienteTipoNegocio"
+                  name="tipoNegocio"
+                  required
+                >
+                  <option value="">Seleccione...</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="clienteEstado" class="form-label">
+                  Estado *
+                </label>
+                <select
+                  class="form-select"
+                  id="clienteEstado"
+                  name="estado"
+                  required
+                >
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label for="clienteObservacion" class="form-label">
+                  Observación
+                </label>
+                <textarea
+                  class="form-control"
+                  id="clienteObservacion"
+                  name="observacion"
+                  rows="3"
+                  placeholder="Notas internas del acompañamiento contable."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="btn cc-btn-primary">
+              <i class="bi bi-save me-1"></i>
+              Guardar cliente
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal detalle cliente -->
+  <div
+    class="modal fade"
+    id="clienteDetalleModal"
+    tabindex="-1"
+    aria-labelledby="clienteDetalleModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="clienteDetalleModalLabel">
+            Ficha de cliente
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Cerrar"
+          ></button>
+        </div>
+
+        <div class="modal-body">
+          <div id="clienteDetalleContenido"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="container my-5">
+      <div class="alert alert-warning">
+        Este prototipo necesita JavaScript habilitado para funcionar.
+      </div>
+    </div>
+  </noscript>
+
+  <!-- Bootstrap Bundle con Popper -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    defer
+  ></script>
+
+  <!-- Scripts del proyecto -->
+  <script src="./js/config.js" defer></script>
+  <script src="./js/utils.js" defer></script>
+  <script src="./js/storage.js" defer></script>
+  <script src="./js/data/seed.js" defer></script>
+  <script src="./js/modules/bitacora.js" defer></script>
+  <script src="./js/auth.js" defer></script>
+  <script src="./js/layout.js" defer></script>
+  <script src="./js/app.js" defer></script>
+  <script src="./js/modules/clientes.js" defer></script>
+</body>
+</html>

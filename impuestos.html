@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas Claras – Impuestos</title>
+  <meta name="description" content="Módulo de cálculo informativo de impuestos y obligaciones tributarias.">
+
+  <!-- Bootstrap 5 por CDN -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Bootstrap Icons por CDN -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+
+  <!-- Estilos propios -->
+  <link href="./css/styles.css" rel="stylesheet">
+  <link href="./css/print.css" rel="stylesheet">
+</head>
+<body data-page="impuestos" data-auth="true">
+
+  <div class="cc-app-shell">
+
+    <!-- Barra lateral -->
+    <aside id="ccSidebar" class="cc-sidebar">
+      <div class="cc-sidebar-brand">
+        <div class="cc-brand-mark small-mark">
+          <i class="bi bi-journal-check"></i>
+        </div>
+        <div>
+          <strong>Cuentas Claras</strong>
+          <small class="d-block text-white-50">
+            Gestión contable digital
+          </small>
+        </div>
+      </div>
+
+      <nav id="ccSidebarMenu" class="cc-sidebar-menu"></nav>
+
+      <div class="cc-sidebar-footer">
+        <small class="text-white-50">
+          Prototipo académico · LocalStorage
+        </small>
+      </div>
+    </aside>
+
+    <div id="ccSidebarBackdrop" class="cc-sidebar-backdrop d-none"></div>
+
+    <!-- Zona principal -->
+    <div class="cc-main">
+
+      <!-- Barra superior -->
+      <header id="ccTopbar" class="cc-topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button
+            id="ccMobileToggle"
+            class="btn btn-light btn-sm cc-mobile-only"
+            type="button"
+            aria-label="Abrir menú"
+          >
+            <i class="bi bi-list"></i>
+          </button>
+
+          <div>
+            <h1 class="h5 mb-0 fw-semibold">
+              Impuestos
+            </h1>
+            <small class="text-muted d-none d-md-block">
+              Cálculo informativo y obligaciones tributarias preventivas
+            </small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span id="ccUserName" class="small text-muted d-none d-md-inline">
+            Usuario
+          </span>
+          <button
+            id="ccLogoutButton"
+            class="btn btn-outline-danger btn-sm"
+            type="button"
+          >
+            <i class="bi bi-box-arrow-right me-1"></i>
+            Salir
+          </button>
+        </div>
+      </header>
+
+      <!-- Contenido -->
+      <main class="cc-content">
+
+        <div class="alert alert-warning small mb-4">
+          <strong>Aviso tributario del prototipo:</strong>
+          los cálculos mostrados son informativos y preventivos.
+          No constituyen declaración automática ante el Servicio de Impuestos Nacionales
+          ni sustituyen la firma, certificación o representación de un
+          Contador Público Autorizado cuando la normativa boliviana lo exija.
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold">
+                Selección de cliente y periodo
+              </h2>
+              <small class="text-muted">
+                El cálculo se realiza sobre transacciones activas del periodo seleccionado.
+              </small>
+            </div>
+
+            <button
+              id="btnCalcularImpuestos"
+              class="btn cc-btn-primary btn-sm"
+              type="button"
+            >
+              <i class="bi bi-calculator me-1"></i>
+              Calcular impuestos
+            </button>
+          </div>
+
+          <div class="card-body">
+            <div class="row g-2 mb-3">
+              <div class="col-12 col-md-5">
+                <label for="impuestoFiltroCliente" class="form-label small">
+                  Cliente
+                </label>
+                <select
+                  id="impuestoFiltroCliente"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Seleccione un cliente...</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-5">
+                <label for="impuestoFiltroPeriodo" class="form-label small">
+                  Periodo
+                </label>
+                <select
+                  id="impuestoFiltroPeriodo"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Seleccione primero un cliente...</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-2 d-flex align-items-end">
+                <button
+                  id="btnRefrescarImpuestos"
+                  class="btn btn-outline-secondary btn-sm w-100"
+                  type="button"
+                >
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  Refrescar
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="impuestoAlerta"
+              class="alert alert-info d-none mb-0"
+              role="alert"
+            ></div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">Ventas del periodo</p>
+                <h2 id="resumenVentas" class="h4 mb-0 fw-bold text-success">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">Compras del periodo</p>
+                <h2 id="resumenCompras" class="h4 mb-0 fw-bold text-danger">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">IVA débito</p>
+                <h2 id="resumenIvaDebito" class="h4 mb-0 fw-bold">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">IVA crédito</p>
+                <h2 id="resumenIvaCredito" class="h4 mb-0 fw-bold">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">IVA por pagar</p>
+                <h2 id="resumenIvaPagar" class="h4 mb-0 fw-bold text-primary-cc">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">IT estimado</p>
+                <h2 id="resumenIT" class="h4 mb-0 fw-bold text-warning">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">Total estimado</p>
+                <h2 id="resumenTotal" class="h4 mb-0 fw-bold text-danger">
+                  Bs 0.00
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card cc-metric-card h-100">
+              <div class="card-body">
+                <p class="text-muted small mb-1">Próximo vencimiento</p>
+                <h2 id="resumenVencimiento" class="h5 mb-0 fw-bold">
+                  -
+                </h2>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">
+              Impuestos calculados
+            </h2>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Concepto</th>
+                    <th>Base imponible</th>
+                    <th>Tasa</th>
+                    <th>Monto</th>
+                    <th>Fecha cálculo</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaImpuestos">
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                      Seleccione un cliente y periodo para calcular impuestos.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">
+              Obligaciones tributarias generadas
+            </h2>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Periodo</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Vencimiento</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaObligaciones">
+                  <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                      Todavía no hay obligaciones generadas.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal detalle obligación -->
+  <div
+    class="modal fade"
+    id="obligacionDetalleModal"
+    tabindex="-1"
+    aria-labelledby="obligacionDetalleModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="obligacionDetalleModalLabel">
+            Ficha de obligación tributaria
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Cerrar"
+          ></button>
+        </div>
+
+        <div class="modal-body">
+          <div id="obligacionDetalleContenido"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="container my-5">
+      <div class="alert alert-warning">
+        Este prototipo necesita JavaScript habilitado para funcionar.
+      </div>
+    </div>
+  </noscript>
+
+  <!-- Bootstrap Bundle con Popper -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    defer
+  ></script>
+
+  <!-- Scripts del proyecto -->
+  <script src="./js/config.js" defer></script>
+  <script src="./js/utils.js" defer></script>
+  <script src="./js/storage.js" defer></script>
+  <script src="./js/data/seed.js" defer></script>
+  <script src="./js/modules/bitacora.js" defer></script>
+  <script src="./js/auth.js" defer></script>
+  <script src="./js/layout.js" defer></script>
+  <script src="./js/app.js" defer></script>
+  <script src="./js/modules/impuestos.js" defer></script>
+</body>
+</html>

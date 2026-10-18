@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Cuentas Claras – Contabilidad digital para microempresas | Trinidad, Beni</title>
+
+  <meta
+    name="description"
+    content="Prototipo académico de gestión contable digital para microempresas comerciales de Trinidad, Beni. Control documental, ciclo contable simplificado, alertas tributarias, estados financieros informativos y reportes en lenguaje sencillo."
+  >
+
+  <meta name="author" content="Lizi Francia Mansilla Vaca · Milton Daniel Hipamo Cholima">
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- Open Graph básico -->
+  <meta property="og:title" content="Cuentas Claras – Contabilidad digital para microempresas">
+  <meta property="og:description" content="Del papel suelto a cuentas claras: documentos, transacciones, Libro Diario, Mayor, Balanza, ajustes, EE.FF., alertas y reporte mensual.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_BO">
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Bootstrap Icons -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+
+  <!-- Estilos base del proyecto y landing -->
+  <link href="./css/styles.css" rel="stylesheet">
+  <link href="./css/landing.css" rel="stylesheet">
+</head>
+
+<body class="cc-landing-body">
+
+  <a class="visually-hidden-focusable" href="#contenido">
+    Saltar al contenido principal
+  </a>
+
+  <!-- =========================================================
+       NAVBAR PÚBLICA
+       ========================================================= -->
+  <nav
+    class="navbar navbar-expand-lg fixed-top cc-landing-navbar"
+    id="ccLandingNavbar"
+    aria-label="Navegación principal"
+  >
+    <div class="container">
+      <a class="navbar-brand cc-landing-brand" href="#inicio">
+        <span class="cc-brand-icon" aria-hidden="true">
+          <i class="bi bi-journal-check"></i>
+        </span>
+        <span>
+          Cuentas <strong>Claras</strong>
+          <small class="d-block">Gestión contable digital</small>
+        </span>
+      </a>
+
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#ccLandingMenu"
+        aria-controls="ccLandingMenu"
+        aria-expanded="false"
+        aria-label="Abrir menú de navegación"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="ccLandingMenu">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="#inicio">Inicio</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#como-funciona">Cómo funciona</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#ciclo">Ciclo contable</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#modulos">Módulos</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#demo">Demo</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#faq">Preguntas</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#contacto">Contacto</a>
+          </li>
+        </ul>
+
+        <div class="ms-lg-3 d-grid d-lg-block">
+          <a href="./login.html" class="btn cc-btn-landing w-100">
+            <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
+            Iniciar sesión
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- =========================================================
+       HERO
+       ========================================================= -->
+  <header class="cc-hero" id="inicio">
+    <div class="container">
+      <div class="row align-items-center gy-5">
+
+        <div class="col-12 col-lg-7 cc-reveal">
+          <span class="cc-eyebrow">
+            <i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i>
+            Prototipo académico · Técnico Medio en Contabilidad
+          </span>
+
+          <h1>
+            Del papel suelto a
+            <span class="cc-highlight">cuentas claras</span>,
+            con ciclo contable completo.
+          </h1>
+
+          <p class="lead">
+            Cuentas Claras ayuda a microempresas comerciales de Trinidad, Beni,
+            a organizar documentos, registrar operaciones, llevar Libro Diario,
+            Libro Mayor, Balanza, ajustes, Estados Financieros simplificados,
+            alertas preventivas y reportes mensuales en lenguaje sencillo.
+          </p>
+
+          <div class="d-flex flex-wrap gap-2">
+            <a href="./login.html" class="btn btn-lg cc-btn-landing">
+              <i class="bi bi-play-circle me-1" aria-hidden="true"></i>
+              Entrar al prototipo
+            </a>
+
+            <a href="#como-funciona" class="btn btn-lg btn-outline-dark cc-btn-ghost">
+              <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>
+              Ver cómo funciona
+            </a>
+          </div>
+
+          <ul class="cc-hero-badges list-unstyled">
+            <li>
+              <i class="bi bi-check2-circle text-success" aria-hidden="true"></i>
+              Doble entrada real
+            </li>
+            <li>
+              <i class="bi bi-check2-circle text-success" aria-hidden="true"></i>
+              Alertas tributarias y operativas
+            </li>
+            <li>
+              <i class="bi bi-check2-circle text-success" aria-hidden="true"></i>
+              Reporte mensual comprensible
+            </li>
+            <li>
+              <i class="bi bi-check2-circle text-success" aria-hidden="true"></i>
+              Respaldo JSON local
+            </li>
+          </ul>
+        </div>
+
+        <div class="col-12 col-lg-5 cc-reveal">
+          <div class="cc-hero-visual" aria-hidden="true">
+            <div class="cc-browser">
+              <div class="cc-browser-bar">
+                <span></span><span></span><span></span>
+                <em>Cuentas Claras – Dashboard</em>
+              </div>
+
+              <div class="cc-browser-body">
+                <div class="cc-mini-sidebar">
+                  <div class="cc-mini-logo">
+                    <i class="bi bi-journal-check"></i>
+                  </div>
+
+                  <span class="cc-mini-item active">Inicio</span>
+                  <span class="cc-mini-item">Clientes</span>
+                  <span class="cc-mini-item">Documentos</span>
+                  <span class="cc-mini-item">Transacciones</span>
+                  <span class="cc-mini-item">Libro Diario</span>
+                  <span class="cc-mini-item">Balanza</span>
+                  <span class="cc-mini-item">EE.FF.</span>
+                  <span class="cc-mini-item">Alertas</span>
+                </div>
+
+                <div class="cc-mini-content">
+                  <div class="cc-mini-metrics">
+                    <div class="cc-mini-card">
+                      <small>Ventas</small>
+                      <strong>Bs 750</strong>
+                      <span class="cc-up">+12%</span>
+                    </div>
+
+                    <div class="cc-mini-card">
+                      <small>Utilidad neta</small>
+                      <strong>Bs 147</strong>
+                      <span class="cc-up">positiva</span>
+                    </div>
+
+                    <div class="cc-mini-card">
+                      <small>Alertas</small>
+                      <strong>3</strong>
+                      <span class="cc-warn">pendientes</span>
+                    </div>
+                  </div>
+
+                  <div class="cc-mini-chart">
+                    <div class="cc-chart-title">Ingresos vs costos</div>
+
+                    <div class="cc-bars">
+                      <div class="cc-bar-group">
+                        <div class="cc-bar-pair">
+                          <span class="cc-bar bar-a" style="--h:70%"></span>
+                          <span class="cc-bar bar-b" style="--h:45%"></span>
+                        </div>
+                        <small>Ago</small>
+                      </div>
+
+                      <div class="cc-bar-group">
+                        <div class="cc-bar-pair">
+                          <span class="cc-bar bar-a" style="--h:82%"></span>
+                          <span class="cc-bar bar-b" style="--h:54%"></span>
+                        </div>
+                        <small>Sep</small>
+                      </div>
+
+                      <div class="cc-bar-group">
+                        <div class="cc-bar-pair">
+                          <span class="cc-bar bar-a" style="--h:92%"></span>
+                          <span class="cc-bar bar-b" style="--h:60%"></span>
+                        </div>
+                        <small>Oct</small>
+                      </div>
+
+                      <div class="cc-bar-group">
+                        <div class="cc-bar-pair">
+                          <span class="cc-bar bar-a" style="--h:76%"></span>
+                          <span class="cc-bar bar-b" style="--h:49%"></span>
+                        </div>
+                        <small>Nov</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="cc-mini-journal">
+                    <div class="cc-journal-row head">
+                      <span>Cuenta</span>
+                      <span>Debe</span>
+                      <span>Haber</span>
+                    </div>
+
+                    <div class="cc-journal-row">
+                      <span>1.1.01 Caja</span>
+                      <span>850.00</span>
+                      <span>—</span>
+                    </div>
+
+                    <div class="cc-journal-row">
+                      <span>4.1.01 Ventas</span>
+                      <span>—</span>
+                      <span>750.00</span>
+                    </div>
+
+                    <div class="cc-journal-row">
+                      <span>2.1.02 IVA DF</span>
+                      <span>—</span>
+                      <span>100.00</span>
+                    </div>
+
+                    <div class="cc-journal-foot">
+                      <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                      Asiento cuadrado
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cc-floating-card cc-float-1">
+              <i class="bi bi-bell-fill" aria-hidden="true"></i>
+              <div>
+                <strong>Alerta</strong>
+                <small>IVA vence 20/11</small>
+              </div>
+            </div>
+
+            <div class="cc-floating-card cc-float-2">
+              <i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i>
+              <div>
+                <strong>Reporte</strong>
+                <small>Lenguaje sencillo</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="cc-hero-wave" aria-hidden="true">
+      <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+        <path
+          d="M0,64 C240,120 420,0 720,32 C1020,64 1200,120 1440,56 L1440,120 L0,120 Z"
+        ></path>
+      </svg>
+    </div>
+  </header>
+
+  <main id="contenido">
+
+    <!-- =========================================================
+         ESTADÍSTICAS
+         ========================================================= -->
+    <section class="cc-stats">
+      <div class="container">
+        <div class="row g-4">
+          <div class="col-6 col-lg-3 cc-reveal">
+            <div class="cc-stat-card">
+              <div class="cc-stat-number" data-count="16">0</div>
+              <div class="cc-stat-label">Pantallas del prototipo</div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-3 cc-reveal">
+            <div class="cc-stat-card">
+              <div class="cc-stat-number" data-count="11">0</div>
+              <div class="cc-stat-label">Pasos del ciclo contable</div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-3 cc-reveal">
+            <div class="cc-stat-card">
+              <div class="cc-stat-number" data-count="15">0</div>
+              <div class="cc-stat-label">Colecciones JSON locales</div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-3 cc-reveal">
+            <div class="cc-stat-card">
+              <div class="cc-stat-number" data-count="100" data-suffix="%">0</div>
+              <div class="cc-stat-label">Front-end sin backend</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         PROBLEMA / SOLUCIÓN
+         ========================================================= -->
+    <section class="cc-section" id="problema">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">El problema real</span>
+          <h2>Muchos microempresarios cumplen, pero no entienden su contabilidad.</h2>
+          <p class="lead">
+            El prototipo no solo guarda datos: convierte documentos en información
+            contable útil, preventiva y comprensible.
+          </p>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-problem-card">
+              <div class="cc-problem-icon danger">
+                <i class="bi bi-folder2-open" aria-hidden="true"></i>
+              </div>
+              <h3>Documentos sueltos</h3>
+              <p>Facturas, recibos y notas pierden control y dificultan sustentar operaciones.</p>
+              <span class="cc-solution">
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                Control documental por cliente y periodo.
+              </span>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-problem-card">
+              <div class="cc-problem-icon warning">
+                <i class="bi bi-percent" aria-hidden="true"></i>
+              </div>
+              <h3>Impuestos sorpresa</h3>
+              <p>No saber qué se debe al SIN genera multas, estrés y decisiones tardías.</p>
+              <span class="cc-solution">
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                Cálculo informativo y alertas preventivas.
+              </span>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-problem-card">
+              <div class="cc-problem-icon info">
+                <i class="bi bi-graph-down-arrow" aria-hidden="true"></i>
+              </div>
+              <h3>No sé si gano</h3>
+              <p>Vender no es lo mismo que ganar. Sin costos, gastos y resultado, no hay claridad.</p>
+              <span class="cc-solution">
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                Estado de Resultados y punto de equilibrio.
+              </span>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-problem-card">
+              <div class="cc-problem-icon primary">
+                <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+              </div>
+              <h3>Reportes difíciles</h3>
+              <p>Un informe contable técnico no sirve si el comerciante no lo entiende.</p>
+              <span class="cc-solution">
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                Reporte mensual en lenguaje sencillo.
+              </span>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         CÓMO FUNCIONA
+         ========================================================= -->
+    <section class="cc-section cc-section-alt" id="como-funciona">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">Flujo operativo</span>
+          <h2>De un documento físico a una decisión contable.</h2>
+          <p class="lead">
+            El sistema sigue una cadena simple y verificable:
+            documento fuente, transacción, asiento contable, análisis y reporte.
+          </p>
+        </div>
+
+        <div class="row g-4 align-items-stretch">
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-step-card">
+              <div class="cc-step-number">1</div>
+              <i class="bi bi-file-earmark-text cc-step-icon" aria-hidden="true"></i>
+              <h3>Documento fuente</h3>
+              <p>
+                Se registra la factura, recibo, nota o extracto que respalda
+                la operación del microempresario.
+              </p>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-step-card">
+              <div class="cc-step-number">2</div>
+              <i class="bi bi-cash-coin cc-step-icon" aria-hidden="true"></i>
+              <h3>Transacción</h3>
+              <p>
+                La operación se clasifica como venta, compra, gasto o ingreso,
+                con cliente, periodo, tercero y forma de pago.
+              </p>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-step-card">
+              <div class="cc-step-number">3</div>
+              <i class="bi bi-journal-bookmark cc-step-icon" aria-hidden="true"></i>
+              <h3>Libro Diario</h3>
+              <p>
+                El motor contable genera asientos de doble entrada, valida
+                cuadratura y permite ajustes manuales cuando se requieren.
+              </p>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3 cc-reveal">
+            <article class="cc-step-card">
+              <div class="cc-step-number">4</div>
+              <i class="bi bi-graph-up-arrow cc-step-icon" aria-hidden="true"></i>
+              <h3>Análisis y reporte</h3>
+              <p>
+                Desde el Diario se derivan Mayor, Balanza, EE.FF., costos,
+                alertas y reporte mensual para el comerciante.
+              </p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         CICLO CONTABLE
+         ========================================================= -->
+    <section class="cc-section" id="ciclo">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">Ciclo contable simplificado</span>
+          <h2>No es solo un registro de ventas: es un ciclo contable completo.</h2>
+          <p class="lead">
+            Cuentas Claras implementa, de forma adaptada a microempresa comercial,
+            las etapas fundamentales del proceso contable.
+          </p>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">1</div>
+              <div>
+                <h3>Catálogo y apertura</h3>
+                <p>Plan de cuentas, activos fijos, capital inicial y periodos contables.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">2</div>
+              <div>
+                <h3>Documentos y transacciones</h3>
+                <p>Registro de facturas, recibos, ventas, compras, gastos e ingresos.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">3</div>
+              <div>
+                <h3>Libro Diario</h3>
+                <p>Asientos automáticos y manuales con doble entrada y cuadratura.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">4</div>
+              <div>
+                <h3>Libro Mayor</h3>
+                <p>Movimientos por cuenta, saldo inicial, saldo corrido y ficha analítica.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">5</div>
+              <div>
+                <h3>Balanza de comprobación</h3>
+                <p>Verifica débitos, créditos y saldos antes de ajustes.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">6</div>
+              <div>
+                <h3>Ajustes contables</h3>
+                <p>Depreciación, devengados, provisiones, reclasificaciones e inventario.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">7</div>
+              <div>
+                <h3>Balanza ajustada</h3>
+                <p>Base para estados financieros, incluyendo efectos de ajustes.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">8</div>
+              <div>
+                <h3>Estado de Resultados</h3>
+                <p>Ventas, costo de ventas, utilidad bruta, gastos, IT informativo y utilidad neta.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">9</div>
+              <div>
+                <h3>Balance General</h3>
+                <p>Activo, pasivo y patrimonio simplificados, con verificación de cuadratura.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">10</div>
+              <div>
+                <h3>Cierre del periodo</h3>
+                <p>Asientos de cierre, bloqueo del periodo y posibilidad de reapertura trazable.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-cycle-card">
+              <div class="cc-cycle-number">11</div>
+              <div>
+                <h3>Costos, alertas y reporte</h3>
+                <p>Márgenes, punto de equilibrio, indicadores, alertas y reporte mensual sencillo.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         MÓDULOS
+         ========================================================= -->
+    <section class="cc-section cc-section-alt" id="modulos">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">Módulos del sistema</span>
+          <h2>Todo organizado por lógica contable y operativa.</h2>
+          <p class="lead">
+            La interfaz interna agrupa las pantallas para que el usuario no se pierda:
+            registro, tributario, ciclo contable, seguimiento y sistema.
+          </p>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-module-card">
+              <div class="cc-module-icon">
+                <i class="bi bi-shop" aria-hidden="true"></i>
+              </div>
+              <h3>Registro operativo</h3>
+              <ul>
+                <li>Clientes microempresarios</li>
+                <li>Periodos contables</li>
+                <li>Documentos de respaldo</li>
+                <li>Transacciones</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-module-card">
+              <div class="cc-module-icon">
+                <i class="bi bi-percent" aria-hidden="true"></i>
+              </div>
+              <h3>Tributario preventivo</h3>
+              <ul>
+                <li>IVA informativo 13%</li>
+                <li>IT informativo 3%</li>
+                <li>Obligaciones referenciales</li>
+                <li>Alertas de vencimiento</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-module-card">
+              <div class="cc-module-icon">
+                <i class="bi bi-journal-text" aria-hidden="true"></i>
+              </div>
+              <h3>Ciclo contable</h3>
+              <ul>
+                <li>Libro Diario</li>
+                <li>Libro Mayor</li>
+                <li>Balanza de comprobación</li>
+                <li>Ajustes y balanza ajustada</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-module-card">
+              <div class="cc-module-icon">
+                <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+              </div>
+              <h3>Estados y análisis</h3>
+              <ul>
+                <li>Estado de Resultados</li>
+                <li>Balance General</li>
+                <li>Costos y rentabilidad</li>
+                <li>Indicadores financieros</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-module-card">
+              <div class="cc-module-icon">
+                <i class="bi bi-bell" aria-hidden="true"></i>
+              </div>
+              <h3>Seguimiento</h3>
+              <ul>
+                <li>Alertas automáticas</li>
+                <li>Reporte mensual</li>
+                <li>Recomendaciones sencillas</li>
+                <li>Evidencia para defensa</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-4 cc-reveal">
+            <article class="cc-module-card">
+              <div class="cc-module-icon">
+                <i class="bi bi-hdd-stack" aria-hidden="true"></i>
+              </div>
+              <h3>Sistema</h3>
+              <ul>
+                <li>Respaldo JSON</li>
+                <li>Importar y exportar</li>
+                <li>Bitácora de acciones</li>
+                <li>Ayuda y límites legales</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         LENGUAJE SENCILLO
+         ========================================================= -->
+    <section class="cc-section" id="lenguaje">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">Valor educativo</span>
+          <h2>Traduce contabilidad a lenguaje de microempresario.</h2>
+          <p class="lead">
+            El sistema no solo calcula: explica. Ayuda al comerciante a entender
+            qué significan los números y qué acción tomar.
+          </p>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-12 col-lg-6 cc-reveal">
+            <div class="cc-compare-card">
+              <div class="cc-compare-head technical">
+                <i class="bi bi-mortarboard" aria-hidden="true"></i>
+                <span>Lenguaje contable</span>
+              </div>
+
+              <ul class="list-unstyled">
+                <li>Utilidad neta del periodo</li>
+                <li>Balance cuadrado</li>
+                <li>Depreciación acumulada</li>
+                <li>Balanza de comprobación</li>
+                <li>Asiento de cierre</li>
+                <li>Punto de equilibrio</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-6 cc-reveal">
+            <div class="cc-compare-card">
+              <div class="cc-compare-head simple">
+                <i class="bi bi-chat-heart" aria-hidden="true"></i>
+                <span>Lectura sencilla</span>
+              </div>
+
+              <ul class="list-unstyled">
+                <li>Lo que realmente queda después de comprar, gastar e impuestos.</li>
+                <li>Lo que tengo coincide con lo que debo más lo que es mío.</li>
+                <li>Parte del valor del equipo ya se usó y debe reconocerse como gasto.</li>
+                <li>Antes de ajustar, revisamos que débitos y créditos cuadren.</li>
+                <li>Se dejan en cero ingresos, costos y gastos para empezar el siguiente mes.</li>
+                <li>Cuánto necesito vender para no perder ni ganar.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="cc-note-card cc-reveal">
+          <i class="bi bi-lightbulb-fill" aria-hidden="true"></i>
+          <p class="mb-0">
+            Este enfoque es clave para el proyecto: la tecnología apaña la educación contable
+            del microempresario, no solo automatiza registros.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         DEMO
+         ========================================================= -->
+    <section class="cc-section cc-demo" id="demo">
+      <div class="container">
+        <div class="row g-5 align-items-center">
+          <div class="col-12 col-lg-7 cc-reveal">
+            <span class="cc-kicker light">Demostración académica</span>
+            <h2>Puede probar el flujo completo con datos semilla.</h2>
+
+            <p class="lead">
+              El prototipo incluye clientes piloto, periodos, documentos, transacciones,
+              impuestos informativos, plan de cuentas, activos fijos, alertas y reportes
+              de ejemplo para demostrar el ciclo contable digital.
+            </p>
+
+            <div class="row g-3">
+              <div class="col-12 col-md-4">
+                <div class="cc-demo-feature">
+                  <i class="bi bi-people" aria-hidden="true"></i>
+                  <strong>3 clientes</strong>
+                  <small>Tienda, ferretería y abarrotes</small>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <div class="cc-demo-feature">
+                  <i class="bi bi-journal-check" aria-hidden="true"></i>
+                  <strong>Ciclo completo</strong>
+                  <small>Diario, Mayor, Balanza, EE.FF.</small>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <div class="cc-demo-feature">
+                  <i class="bi bi-shield-check" aria-hidden="true"></i>
+                  <strong>Avisos legales</strong>
+                  <small>No sustituye CPA</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <a href="./login.html" class="btn btn-lg cc-btn-landing">
+                <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
+                Ingresar a la demo
+              </a>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-5 cc-reveal">
+            <div class="cc-credentials-card">
+              <div class="cc-credentials-head">
+                <i class="bi bi-key-fill" aria-hidden="true"></i>
+                <div>
+                  <h3>Credenciales de demostración</h3>
+                  <small>Prototipo académico · no seguridad real</small>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Contraseña</th>
+                      <th>Rol</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>admin</code></td>
+                      <td><code>Admin123</code></td>
+                      <td>Administrador</td>
+                    </tr>
+                    <tr>
+                      <td><code>contador</code></td>
+                      <td><code>Contador123</code></td>
+                      <td>Contador</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="alert alert-warning small mb-0 mt-3">
+                <strong>Importante:</strong>
+                los datos se guardan en LocalStorage del navegador. Exporte respaldos JSON
+                si desea conservarlos o moverlos entre equipos.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         TECNOLOGÍA
+         ========================================================= -->
+    <section class="cc-section cc-section-alt" id="tecnologia">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">Stack del prototipo</span>
+          <h2>Ligero, estático y desplegable en GitHub Pages.</h2>
+          <p class="lead">
+            Para fines académicos, el sistema usa tecnologías simples, sin backend,
+            sin base de datos servida y sin dependencias pesadas.
+          </p>
+        </div>
+
+        <div class="cc-tech-grid cc-reveal">
+          <span class="cc-tech-badge">HTML5</span>
+          <span class="cc-tech-badge">CSS3</span>
+          <span class="cc-tech-badge">JavaScript vanilla</span>
+          <span class="cc-tech-badge">Bootstrap 5</span>
+          <span class="cc-tech-badge">Bootstrap Icons</span>
+          <span class="cc-tech-badge">JSON</span>
+          <span class="cc-tech-badge">LocalStorage</span>
+          <span class="cc-tech-badge">Git</span>
+          <span class="cc-tech-badge">GitHub Pages</span>
+        </div>
+
+        <div class="row g-4 mt-2">
+          <div class="col-12 col-md-4 cc-reveal">
+            <div class="cc-tech-card">
+              <i class="bi bi-phone" aria-hidden="true"></i>
+              <h3>Responsive</h3>
+              <p>Probado para escritorio, tablet y celular, con menú móvil y tablas desplazables.</p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4 cc-reveal">
+            <div class="cc-tech-card">
+              <i class="bi bi-cloud-slash" aria-hidden="true"></i>
+              <h3>Sin servidor</h3>
+              <p>Ideal para demostración académica: se puede abrir localmente o publicar como sitio estático.</p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4 cc-reveal">
+            <div class="cc-tech-card">
+              <i class="bi bi-file-earmark-code" aria-hidden="true"></i>
+              <h3>Código transparente</h3>
+              <p>Permite evidenciar lógica contable, reglas de asiento, derivaciones y respaldos.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         AVISO PROFESIONAL
+         ========================================================= -->
+    <section class="cc-disclaimer">
+      <div class="container">
+        <div class="cc-disclaimer-card cc-reveal">
+          <div class="cc-disclaimer-icon">
+            <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+          </div>
+
+          <div>
+            <h2>Aviso profesional y límite del prototipo</h2>
+
+            <p>
+              Cuentas Claras es una herramienta de apoyo contable digital, asistencia administrativa,
+              control documental, cálculo preventivo de obligaciones, generación de reportes y
+              educación tributaria para microempresas comerciales.
+            </p>
+
+            <p class="mb-0">
+              <strong>No sustituye</strong> la firma, certificación, auditoría, dictamen,
+              representación formal ni cualquier otra actuación profesional reservada a un
+              Contador Público Autorizado u otro profesional habilitado cuando la normativa
+              boliviana lo exija. Los cálculos tributarios y estados financieros son
+              informativos, preventivos y formativos.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         FAQ
+         ========================================================= -->
+    <section class="cc-section" id="faq">
+      <div class="container">
+        <div class="cc-section-head cc-reveal">
+          <span class="cc-kicker">Preguntas frecuentes</span>
+          <h2>Respuestas rápidas para defensa académica y usuarios piloto.</h2>
+        </div>
+
+        <div class="accordion cc-faq-accordion cc-reveal" id="ccFaqAccordion">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#faq1"
+                aria-expanded="true"
+                aria-controls="faq1"
+              >
+                ¿El sistema declara impuestos ante el SIN?
+              </button>
+            </h2>
+            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#ccFaqAccordion">
+              <div class="accordion-body">
+                No. Calcula IVA, IT y obligaciones de forma informativa y preventiva.
+                No constituye declaración automática ante el Servicio de Impuestos Nacionales.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#faq2"
+                aria-expanded="false"
+                aria-controls="faq2"
+              >
+                ¿Sustituye a un Contador Público Autorizado?
+              </button>
+            </h2>
+            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#ccFaqAccordion">
+              <div class="accordion-body">
+                No. Es una herramienta académica de apoyo contable, documental y educativo.
+                La responsabilidad profesional formal corresponde al profesional habilitado
+                cuando la normativa lo exija.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#faq3"
+                aria-expanded="false"
+                aria-controls="faq3"
+              >
+                ¿Dónde se guardan los datos?
+              </button>
+            </h2>
+            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#ccFaqAccordion">
+              <div class="accordion-body">
+                En LocalStorage del navegador. Por eso el prototipo incluye exportación
+                e importación de respaldos JSON, carga de semilla y restablecimiento.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#faq4"
+                aria-expanded="false"
+                aria-controls="faq4"
+              >
+                ¿Sirve para celular?
+              </button>
+            </h2>
+            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#ccFaqAccordion">
+              <div class="accordion-body">
+                Sí. La interfaz es responsive. Sin embargo, los datos no se sincronizan
+                entre dispositivos; para trasladar información se usa respaldo JSON.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#faq5"
+                aria-expanded="false"
+                aria-controls="faq5"
+              >
+                ¿Qué método de inventario usa?
+              </button>
+            </h2>
+            <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#ccFaqAccordion">
+              <div class="accordion-body">
+                Usa método periódico simplificado, adecuado para microempresa comercial
+                y para el alcance académico. El Kardex por ítem se declara como proyección.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#faq6"
+                aria-expanded="false"
+                aria-controls="faq6"
+              >
+                ¿El Libro Mayor y la Balanza se guardan en base de datos?
+              </button>
+            </h2>
+            <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#ccFaqAccordion">
+              <div class="accordion-body">
+                No. Se calculan en vivo desde las líneas del Libro Diario. Esto evita
+                duplicar información y garantiza que siempre reflejen los asientos vigentes.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       FOOTER
+       ========================================================= -->
+  <footer class="cc-footer" id="contacto">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-12 col-lg-4">
+          <div class="cc-footer-brand">
+            <span class="cc-brand-icon" aria-hidden="true">
+              <i class="bi bi-journal-check"></i>
+            </span>
+
+            <div>
+              <strong>Cuentas Claras</strong>
+              <small>Gestión contable digital</small>
+            </div>
+          </div>
+
+          <p class="mt-3">
+            Prototipo académico de emprendimiento productivo para optar al título de
+            Técnico Medio en Contabilidad del Centro de Educación Alternativa
+            “Santísima Trinidad”, Trinidad – Beni – Bolivia.
+          </p>
+
+          <div class="cc-footer-actions">
+            <a href="./login.html" class="btn btn-sm cc-btn-landing">
+              <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
+              Entrar
+            </a>
+
+            <a href="#inicio" class="btn btn-sm btn-outline-light">
+              <i class="bi bi-arrow-up-circle me-1" aria-hidden="true"></i>
+              Volver arriba
+            </a>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+          <h3>Proyecto</h3>
+
+          <ul class="list-unstyled cc-footer-list">
+            <li><strong>Participantes:</strong><br>Lizi Francia Mansilla Vaca<br>Milton Daniel Hipamo Cholima</li>
+            <li><strong>Tutora:</strong><br>Lic. Sarita Ignacia</li>
+            <li><strong>Facilitador:</strong><br>Lic. Edgar Aquilino</li>
+          </ul>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+          <h3>Institución</h3>
+
+          <ul class="list-unstyled cc-footer-list">
+            <li><strong>Director:</strong><br>Lic. Miguel Valencia Mazi</li>
+            <li><strong>Centro:</strong><br>C.E.A. Santísima Trinidad</li>
+            <li><strong>Carrera:</strong><br>Técnico Medio en Contabilidad</li>
+            <li><strong>Ubicación:</strong><br>Trinidad, Beni, Bolivia</li>
+          </ul>
+        </div>
+
+        <div class="col-12 col-lg-2">
+          <h3>Año</h3>
+          <p class="cc-footer-year">2026</p>
+
+          <p class="small text-white-50 mb-0">
+            Documento público del prototipo. La información de clientes reales es
+            confidencial y debe manejarse con autorización.
+          </p>
+        </div>
+      </div>
+
+      <div class="cc-footer-bottom">
+        <p class="mb-0">
+          © <span id="ccYear">2026</span> Cuentas Claras · Prototipo académico de Contabilidad.
+        </p>
+
+        <p class="mb-0 small">
+          Herramienta de apoyo contable digital · No sustituye actuación profesional reservada.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <noscript>
+    <div class="container my-5">
+      <div class="alert alert-warning">
+        Esta landing necesita JavaScript habilitado para animaciones y menú móvil.
+        El contenido principal sigue siendo legible.
+      </div>
+    </div>
+  </noscript>
+
+  <!-- Bootstrap Bundle -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    defer
+  ></script>
+
+  <!-- Config del proyecto -->
+  <script src="./js/config.js" defer></script>
+
+  <!-- Scripts de landing -->
+  <script src="./js/landing.js" defer></script>
+</body>
+</html>

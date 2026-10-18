@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas Claras – Libro Mayor</title>
+  <meta name="description" content="Libro Mayor derivado del Libro Diario, con movimientos y saldos por cuenta.">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="./css/styles.css" rel="stylesheet">
+  <link href="./css/print.css" rel="stylesheet">
+</head>
+<body data-page="libro-mayor" data-auth="true">
+
+  <div class="cc-app-shell">
+    <aside id="ccSidebar" class="cc-sidebar">
+      <div class="cc-sidebar-brand">
+        <div class="cc-brand-mark small-mark"><i class="bi bi-journal-check"></i></div>
+        <div>
+          <strong>Cuentas Claras</strong>
+          <small class="d-block text-white-50">Gestión contable digital</small>
+        </div>
+      </div>
+      <nav id="ccSidebarMenu" class="cc-sidebar-menu"></nav>
+      <div class="cc-sidebar-footer">
+        <small class="text-white-50">Prototipo académico · LocalStorage</small>
+      </div>
+    </aside>
+
+    <div id="ccSidebarBackdrop" class="cc-sidebar-backdrop d-none"></div>
+
+    <div class="cc-main">
+      <header id="ccTopbar" class="cc-topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button id="ccMobileToggle" class="btn btn-light btn-sm cc-mobile-only" type="button" aria-label="Abrir menú">
+            <i class="bi bi-list"></i>
+          </button>
+          <div>
+            <h1 class="h5 mb-0 fw-semibold">Libro Mayor</h1>
+            <small class="text-muted d-none d-md-block">Clasificación analítica de movimientos por cuenta</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span id="ccUserName" class="small text-muted d-none d-md-inline">Usuario</span>
+          <button id="ccLogoutButton" class="btn btn-outline-danger btn-sm" type="button">
+            <i class="bi bi-box-arrow-right me-1"></i>Salir
+          </button>
+        </div>
+      </header>
+
+      <main class="cc-content">
+
+        <div class="alert alert-info small mb-4 no-print">
+          <strong>Nota:</strong> el Libro Mayor se calcula en vivo desde el Libro Diario.
+          Solo considera asientos vigentes. El saldo inicial arrastra periodos anteriores.
+          Haga clic en una cuenta para ver su ficha con saldo corrido.
+        </div>
+
+        <!-- Filtros (no se imprimen) -->
+        <div class="card mb-4 no-print">
+          <div class="card-header bg-white d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold">Selección de cliente y periodo</h2>
+              <small class="text-muted">El mayor requiere un cliente y un periodo definidos.</small>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button id="btnImprimirMayor" class="btn btn-outline-secondary btn-sm" type="button">
+                <i class="bi bi-printer me-1"></i>Imprimir
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-12 col-md-5">
+                <label for="mayorFiltroCliente" class="form-label small">Cliente *</label>
+                <select id="mayorFiltroCliente" class="form-select form-select-sm">
+                  <option value="">Seleccione un cliente...</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-5">
+                <label for="mayorFiltroPeriodo" class="form-label small">Periodo *</label>
+                <select id="mayorFiltroPeriodo" class="form-select form-select-sm">
+                  <option value="">Seleccione primero un cliente...</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-2 d-flex align-items-end">
+                <button id="btnRefrescarMayor" class="btn btn-outline-secondary btn-sm w-100" type="button">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Refrescar
+                </button>
+              </div>
+            </div>
+            <div id="mayorAlerta" class="alert alert-warning d-none mt-3 mb-0 small" role="alert"></div>
+          </div>
+        </div>
+
+        <!-- Encabezado de impresión -->
+        <div class="cc-report-header d-none d-print-block mb-3">
+          <h2 class="cc-report-title h4 mb-1">Libro Mayor – Resumen por cuenta</h2>
+          <p class="small mb-0" id="mayorEncabezadoImpresion">-</p>
+        </div>
+
+        <!-- Tabla resumen -->
+        <div class="card mb-4">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">Resumen de saldos por cuenta</h2>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Cuenta</th>
+                    <th>Tipo</th>
+                    <th>Naturaleza</th>
+                    <th class="text-end">Saldo inicial</th>
+                    <th class="text-end">Débitos</th>
+                    <th class="text-end">Créditos</th>
+                    <th class="text-end">Saldo final</th>
+                    <th class="text-end no-print">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaMayorResumen">
+                  <tr><td colspan="9" class="text-center text-muted py-4">Seleccione cliente y periodo.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ficha de cuenta (se imprime) -->
+        <div class="card d-none" id="fichaCuentaCard">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 fw-semibold" id="fichaCuentaTitulo">Ficha de cuenta</h2>
+            <button id="btnCerrarFicha" class="btn btn-outline-secondary btn-sm no-print" type="button">
+              <i class="bi bi-x-lg me-1"></i>Ocultar ficha
+            </button>
+          </div>
+          <div class="card-body">
+            <div id="fichaCuentaContenido"></div>
+          </div>
+        </div>
+
+        <div class="card border-0 bg-light no-print">
+          <div class="card-body small text-muted">
+            <p class="fw-semibold mb-1 text-dark">Regla de derivación</p>
+            <p class="mb-0">
+              Si edita o anula un asiento en el Libro Diario, este Mayor se recalcula automáticamente
+              al volver a abrir la pantalla. Nunca se edita un saldo de Mayor a mano.
+            </p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="container my-5"><div class="alert alert-warning">Este prototipo necesita JavaScript habilitado.</div></div>
+  </noscript>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+  <script src="./js/config.js" defer></script>
+  <script src="./js/utils.js" defer></script>
+  <script src="./js/storage.js" defer></script>
+  <script src="./js/data/seed.js" defer></script>
+  <script src="./js/modules/bitacora.js" defer></script>
+  <script src="./js/auth.js" defer></script>
+  <script src="./js/layout.js" defer></script>
+  <script src="./js/app.js" defer></script>
+  <script src="./js/modules/mayor-balanza.js" defer></script>
+  <script src="./js/modules/libro-mayor.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+/* =========================================================
+   Cuentas Claras MVP
+   Estilos de impresión para reportes contables
+   Fase 14: pulido final
+   ========================================================= */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Elementos que no deben imprimirse */
+  .cc-sidebar,
+  .cc-topbar,
+  .cc-sidebar-backdrop,
+  .cc-mobile-only,
+  .no-print,
+  .btn,
+  .form-check,
+  .modal,
+  .dropdown-menu,
+  .pagination,
+  .breadcrumb,
+  .nav-tabs,
+  .alert-dismissible .btn-close,
+  #efControls,
+  #repControls,
+  #ciControls,
+  #ayudaControls,
+  .cc-costos-controls,
+  .cc-reporte-controls,
+  .cc-help-controls {
+    display: none !important;
+  }
+
+  /* Estructura principal */
+  .cc-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .cc-content {
+    padding: 0 !important;
+  }
+
+  .card {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .card-header,
+  .card-body {
+    padding: 0.35rem 0 !important;
+    background: transparent !important;
+  }
+
+  /* Tablas */
+  .table {
+    width: 100% !important;
+    font-size: 9.5pt !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.28rem 0.4rem !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .table-responsive {
+    overflow: visible !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Encabezados de reporte */
+  .cc-report-header {
+    display: block !important;
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 0.35rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .cc-report-title {
+    color: #000 !important;
+  }
+
+  /* Estados financieros */
+  .cc-statement-table td:first-child {
+    width: 72% !important;
+  }
+
+  .cc-statement-table td:last-child,
+  .cc-statement-table th:last-child {
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  .cc-statement-section th {
+    background: #f1f5f9 !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+    border-top: 1px solid #94a3b8 !important;
+    border-bottom: 1px solid #94a3b8 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Badges y estados */
+  .badge,
+  .cc-status-activo,
+  .cc-status-inactivo,
+  .cc-status-pendiente,
+  .cc-status-vencida,
+  .cc-status-anulada,
+  .cc-status-abierto,
+  .cc-status-en_revision,
+  .cc-status-cerrado {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    border: 1px solid rgba(0, 0, 0, 0.18) !important;
+  }
+
+  /* Alerts */
+  .alert {
+    border: 1px solid #94a3b8 !important;
+    background: #fff !important;
+    color: #000 !important;
+    border-radius: 0.35rem !important;
+    padding: 0.5rem 0.65rem !important;
+  }
+
+  /* Ayuda: fuerza apertura de acordeones al imprimir */
+  #ayudaAccordion .accordion-item {
+    border: 1px solid #dee2e6 !important;
+    margin-bottom: 0.5rem !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #ayudaAccordion .accordion-button {
+    background: #f8fafc !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    font-weight: 700 !important;
+  }
+
+  #ayudaAccordion .accordion-collapse,
+  #ayudaAccordion .accordion-body {
+    display: block !important;
+    height: auto !important;
+    visibility: visible !important;
+  }
+
+  /* Evita cortes feos */
+  section,
+  .list-group-item,
+  tr,
+  .cc-metric-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Enlaces sin decoración */
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  .text-muted {
+    color: #475569 !important;
+  }
+}
