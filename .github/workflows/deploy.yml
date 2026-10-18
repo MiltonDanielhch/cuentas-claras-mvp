@@ -37,7 +37,7 @@ jobs:
             --exclude='.github' \
             --exclude='_site' \
             --exclude='node_modules' \
-            cuentas-claras-mvp/ _site/
+            ./ _site/
           touch _site/.nojekyll
 
       - name: Subir artefacto para Pages
