@@ -1,7 +1,7 @@
 /* =========================================================
    Cuentas Claras MVP
    Configuración general del sistema
-   Versión contable completa: Fase 7
+   Versión contable completa: Fase 16 (menú colapsable + documentación)
    ========================================================= */
 
 window.CC_CONFIG = {
@@ -57,6 +57,7 @@ window.CC_CONFIG = {
     reportes: "./reportes.html",
     respaldo: "./respaldo.html",
     ayuda: "./ayuda.html",
+    documentacion: "./documentacion.html", // FASE 16
     notFound: "./404.html"
   },
 
@@ -64,7 +65,8 @@ window.CC_CONFIG = {
   publicRoutes: [
     "./index.html",
     "./login.html",
-    "./404.html"
+    "./404.html",
+    "./documentacion.html" // FASE 16: documentación accesible sin login
   ],
 
   // Ruta por defecto después de iniciar sesión
@@ -186,6 +188,13 @@ window.CC_CONFIG = {
       href: "./ayuda.html",
       icon: "bi-question-circle",
       page: "ayuda"
+    },
+    {
+      id: "documentacion", // FASE 16
+      label: "Documentación",
+      href: "./documentacion.html",
+      icon: "bi-book",
+      page: "documentacion"
     }
   ],
 

@@ -1,7 +1,7 @@
 /* =========================================================
    Cuentas Claras MVP
-   Layout dinámico: menú lateral agrupado, topbar, móvil
-   Fase 14.1: fix overflow + menú por secciones lógicas
+   Layout dinámico: menú lateral COLAPSABLE por grupos
+   Fase 16.1: contraer/expandir secciones + persistencia
    ========================================================= */
 
 window.CC_LAYOUT = (function () {
@@ -29,26 +29,19 @@ window.CC_LAYOUT = (function () {
     "alertas",
     "reportes",
     "respaldo",
-    "ayuda"
+    "ayuda",
+    "documentacion"
   ];
 
   /* Agrupación lógica del menú. El orden de los grupos manda. */
   const MENU_GROUPS = [
-    {
-      id: "panel",
-      label: "Panel",
-      pages: ["dashboard"]
-    },
+    { id: "panel", label: "Panel", pages: ["dashboard"] },
     {
       id: "registro",
       label: "Registro operativo",
       pages: ["clientes", "periodos", "documentos", "transacciones"]
     },
-    {
-      id: "tributario",
-      label: "Tributario",
-      pages: ["impuestos"]
-    },
+    { id: "tributario", label: "Tributario", pages: ["impuestos"] },
     {
       id: "contable",
       label: "Ciclo contable",
@@ -61,21 +54,18 @@ window.CC_LAYOUT = (function () {
         "costos-indicadores"
       ]
     },
-    {
-      id: "seguimiento",
-      label: "Seguimiento",
-      pages: ["alertas", "reportes"]
-    },
+    { id: "seguimiento", label: "Seguimiento", pages: ["alertas", "reportes"] },
     {
       id: "sistema",
       label: "Sistema",
-      pages: ["respaldo", "ayuda"]
+      pages: ["respaldo", "ayuda", "documentacion"]
     }
   ];
 
+  const MENU_STATE_KEY = (cfg.storagePrefix || "cc_") + "menu_expanded";
+
   function getPageFromHref(href) {
     if (!href) return "";
-
     return String(href)
       .replace("./", "")
       .replace(".html", "")
@@ -87,9 +77,34 @@ window.CC_LAYOUT = (function () {
     return window.matchMedia("(max-width: 991.98px)").matches;
   }
 
+  /* ---------- Persistencia de grupos abiertos ---------- */
+  function loadExpanded() {
+    try {
+      const raw = localStorage.getItem(MENU_STATE_KEY);
+      if (!raw) return null; // null = primera vez -> solo grupo activo abierto
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? new Set(arr) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveExpanded(set) {
+    try {
+      localStorage.setItem(MENU_STATE_KEY, JSON.stringify(Array.from(set)));
+    } catch (error) {
+      /* modo privado / cuota llena: se ignora, no rompe el menú */
+    }
+  }
+
+  function findGroupOfPage(page) {
+    const found = MENU_GROUPS.find((g) => g.pages.includes(page));
+    return found ? found.id : null;
+  }
+
+  /* ---------- Render del menú ---------- */
   function renderItem(item, currentPage) {
     const active = item.page === currentPage ? "active" : "";
-
     return `
       <li class="cc-nav-item">
         <a href="${item.href}" class="cc-nav-link ${active}" data-page="${item.page}">
@@ -104,7 +119,6 @@ window.CC_LAYOUT = (function () {
     const currentPage = document.body.dataset.page || "";
     const menuItems = cfg.menu || [];
 
-    // Mapa page -> item para resolver grupos rápido
     const byPage = {};
     menuItems.forEach((item) => {
       byPage[item.page] = item;
@@ -112,40 +126,56 @@ window.CC_LAYOUT = (function () {
 
     const usedPages = new Set();
     const sections = [];
+    let index = 0;
 
-    MENU_GROUPS.forEach((group, index) => {
-      const items = group.pages
-        .map((page) => byPage[page])
-        .filter(Boolean);
-
+    MENU_GROUPS.forEach((group) => {
+      const items = group.pages.map((p) => byPage[p]).filter(Boolean);
       if (!items.length) return;
 
       items.forEach((item) => usedPages.add(item.page));
 
+      const listId = "cc-nav-list-" + group.id;
       const divider = index > 0 ? '<div class="cc-nav-divider"></div>' : "";
+      index += 1;
 
       sections.push(`
         ${divider}
-        <div class="cc-nav-section">
-          <span class="cc-nav-section-label">${utils.escapeHTML(group.label)}</span>
-          <ul class="cc-nav-list">
-            ${items.map((item) => renderItem(item, currentPage)).join("")}
-          </ul>
+        <div class="cc-nav-group" data-group="${group.id}">
+          <button
+            type="button"
+            class="cc-nav-group-header"
+            aria-expanded="false"
+            aria-controls="${listId}"
+          >
+            <span class="cc-nav-group-label">${utils.escapeHTML(group.label)}</span>
+            <i class="bi bi-chevron-right cc-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="cc-nav-group-list" id="${listId}">
+            <ul class="cc-nav-list">
+              ${items.map((item) => renderItem(item, currentPage)).join("")}
+            </ul>
+          </div>
         </div>
       `);
     });
 
-    // Cualquier item de config que no entró en un grupo va al final (defensivo)
+    // Defensivo: cualquier item de config fuera de grupo va a "Otros"
     const leftovers = menuItems.filter((item) => !usedPages.has(item.page));
-
     if (leftovers.length) {
+      const listId = "cc-nav-list-otros";
+      const divider = index > 0 ? '<div class="cc-nav-divider"></div>' : "";
       sections.push(`
-        <div class="cc-nav-divider"></div>
-        <div class="cc-nav-section">
-          <span class="cc-nav-section-label">Otros</span>
-          <ul class="cc-nav-list">
-            ${leftovers.map((item) => renderItem(item, currentPage)).join("")}
-          </ul>
+        ${divider}
+        <div class="cc-nav-group" data-group="otros">
+          <button type="button" class="cc-nav-group-header" aria-expanded="false" aria-controls="${listId}">
+            <span class="cc-nav-group-label">Otros</span>
+            <i class="bi bi-chevron-right cc-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="cc-nav-group-list" id="${listId}">
+            <ul class="cc-nav-list">
+              ${leftovers.map((item) => renderItem(item, currentPage)).join("")}
+            </ul>
+          </div>
         </div>
       `);
     }
@@ -153,12 +183,72 @@ window.CC_LAYOUT = (function () {
     return sections.join("");
   }
 
+  function applyOpenState() {
+    const currentPage = document.body.dataset.page || "";
+    const activeGroup = findGroupOfPage(currentPage);
+
+    let expanded = loadExpanded();
+
+    if (expanded === null) {
+      // Primera vez: solo el grupo activo queda abierto
+      expanded = new Set(activeGroup ? [activeGroup] : []);
+    } else if (activeGroup) {
+      // Siempre asegurar visible el grupo de la página actual
+      expanded.add(activeGroup);
+    }
+
+    document.querySelectorAll("#ccSidebarMenu .cc-nav-group").forEach((groupEl) => {
+      const id = groupEl.dataset.group;
+      const isOpen = expanded.has(id);
+      groupEl.classList.toggle("open", isOpen);
+
+      const header = groupEl.querySelector(".cc-nav-group-header");
+      if (header) header.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    saveExpanded(expanded);
+  }
+
   function renderSidebar() {
     const menu = document.getElementById("ccSidebarMenu");
     if (!menu) return;
     menu.innerHTML = buildMenu();
+    applyOpenState();
   }
 
+  /* ---------- Toggle de grupos ---------- */
+  function bindGroupToggle() {
+    const menu = document.getElementById("ccSidebarMenu");
+    if (!menu) return;
+
+    menu.addEventListener("click", (event) => {
+      const header = event.target.closest(".cc-nav-group-header");
+      if (!header) return;
+
+      const groupEl = header.closest(".cc-nav-group");
+      if (!groupEl) return;
+
+      const id = groupEl.dataset.group;
+      const willOpen = !groupEl.classList.contains("open");
+
+      groupEl.classList.toggle("open", willOpen);
+      header.setAttribute("aria-expanded", String(willOpen));
+
+      const currentPage = document.body.dataset.page || "";
+      const activeGroup = findGroupOfPage(currentPage);
+
+      const expanded = loadExpanded() || new Set();
+      if (willOpen) expanded.add(id);
+      else expanded.delete(id);
+
+      // El grupo activo nunca se cierra del todo para no perder referencia
+      if (activeGroup) expanded.add(activeGroup);
+
+      saveExpanded(expanded);
+    });
+  }
+
+  /* ---------- Menú móvil ---------- */
   function bindMobileMenu() {
     const toggle = document.getElementById("ccMobileToggle");
     const sidebar = document.getElementById("ccSidebar");
@@ -190,14 +280,13 @@ window.CC_LAYOUT = (function () {
       if (event.key === "Escape") closeSidebar();
     });
 
-    // Cierra el menú móvil al elegir una opción
+    // Cierra el drawer móvil al elegir una opción (no al tocar un header de grupo)
     sidebar.addEventListener("click", (event) => {
       const link = event.target.closest("a.cc-nav-link");
       if (!link) return;
       if (isMobile()) closeSidebar();
     });
 
-    // Al pasar a escritorio, asegura menú cerrado
     window.addEventListener("resize", () => {
       if (!isMobile()) closeSidebar();
     });
@@ -250,6 +339,7 @@ window.CC_LAYOUT = (function () {
     if (initialized) return;
 
     renderSidebar();
+    bindGroupToggle();
     bindMobileMenu();
     bindLogout();
     setUserLabel();
