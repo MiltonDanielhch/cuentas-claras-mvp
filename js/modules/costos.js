@@ -1,7 +1,13 @@
 /* =========================================================
    Cuentas Claras MVP
    Motor de costos, rentabilidad e indicadores
-   Fase 9
+   Fase 9.1: cálculo acumulado a la fecha seleccionada
+   ------------------------------------------------------------
+   Cambio principal:
+   - Income Statement usa saldos acumulados de la Balanza ajustada.
+   - Impuestos informativos se acumulan hasta el periodo seleccionado.
+   - Esto permite que Diciembre 2026 muestre el ejercicio anual
+     del Capítulo 5, y otros meses muestren acumulado parcial.
    ========================================================= */
 
 window.CC_COSTOS = (function () {
@@ -74,20 +80,28 @@ window.CC_COSTOS = (function () {
     };
   }
 
-  function getTaxes(clientId, periodoId) {
+  /* ---------------------------------------------------------
+     Impuestos acumulados hasta el periodo seleccionado.
+     --------------------------------------------------------- */
+
+  function getTaxes(clientId, ctx, currentKey) {
     const taxes = storage
       .list("taxes")
-      .filter(
-        (t) =>
-          t.clienteId === clientId &&
-          t.periodoId === periodoId
-      );
+      .filter((t) => t.clienteId === clientId);
 
-    const it = taxes
+    const included = taxes.filter((t) => {
+      const period = ctx?.periodMap?.[t.periodoId];
+
+      if (!period) return false;
+
+      return motor.periodKey(period) <= currentKey;
+    });
+
+    const it = included
       .filter((t) => t.tipo === "IT" && t.concepto === "ventas_brutas")
       .reduce((sum, t) => sum + safeNumber(t.monto), 0);
 
-    const ivaPagar = taxes
+    const ivaPagar = included
       .filter((t) => t.tipo === "IVA" && t.concepto === "por_pagar")
       .reduce((sum, t) => sum + safeNumber(t.monto), 0);
 
@@ -97,19 +111,31 @@ window.CC_COSTOS = (function () {
     };
   }
 
+  /* ---------------------------------------------------------
+     Estado de resultados acumulado a la fecha.
+     --------------------------------------------------------- */
+
   function computeIncome(balances, taxes) {
     const rowByCode = makeRowLookup(balances);
 
-    function periodNetDebit(code) {
+    function acumuladoNetDeudor(code) {
       const row = rowByCode(code);
       if (!row) return 0;
-      return round2(safeNumber(row.debitos) - safeNumber(row.creditos));
+
+      return round2(
+        safeNumber(row.saldoDeudor) -
+        safeNumber(row.saldoAcreedor)
+      );
     }
 
-    function periodNetCredit(code) {
+    function acumuladoNetAcreedor(code) {
       const row = rowByCode(code);
       if (!row) return 0;
-      return round2(safeNumber(row.creditos) - safeNumber(row.debitos));
+
+      return round2(
+        safeNumber(row.saldoAcreedor) -
+        safeNumber(row.saldoDeudor)
+      );
     }
 
     function accountName(code) {
@@ -117,12 +143,12 @@ window.CC_COSTOS = (function () {
       return row ? row.nombre : code;
     }
 
-    const ventas = periodNetCredit("4.1.01");
-    const otrosIngresos = periodNetCredit("4.1.02");
+    const ventas = acumuladoNetAcreedor("4.1.01");
+    const otrosIngresos = acumuladoNetAcreedor("4.1.02");
     const totalIngresos = round2(ventas + otrosIngresos);
 
-    const comprasBrutas = periodNetDebit("5.1.01");
-    const devolucionesCompras = periodNetCredit("5.1.02");
+    const comprasBrutas = acumuladoNetDeudor("5.1.01");
+    const devolucionesCompras = acumuladoNetAcreedor("5.1.02");
     const costoNeto = round2(comprasBrutas - devolucionesCompras);
 
     const utilidadBruta = round2(totalIngresos - costoNeto);
@@ -130,7 +156,7 @@ window.CC_COSTOS = (function () {
     const gastos = EXPENSE_CODES.map((code) => ({
       codigo: code,
       nombre: accountName(code),
-      monto: periodNetDebit(code)
+      monto: acumuladoNetDeudor(code)
     }));
 
     const totalGastos = round2(
@@ -296,7 +322,7 @@ window.CC_COSTOS = (function () {
     let motivoNoCalculable = "";
 
     if (totalIngresos <= 0) {
-      motivoNoCalculable = "No hay ingresos registrados en el periodo.";
+      motivoNoCalculable = "No hay ingresos acumulados registrados hasta el periodo.";
     } else if (cmRatio === null) {
       motivoNoCalculable = "No es posible calcular el margen de contribución.";
     } else if (cmRatio <= 0.0001) {
@@ -320,7 +346,6 @@ window.CC_COSTOS = (function () {
   }
 
   function computeIndicators(income, balanceSheet, costMetrics) {
-    const rowLookup = null;
     const inventario = balanceSheet.activoCorrienteLines.find(
       (l) => l.codigo === "1.1.04"
     )?.monto || 0;
@@ -377,29 +402,29 @@ window.CC_COSTOS = (function () {
 
     if (income.totalIngresos <= 0) {
       insights.push(
-        "No hay ingresos registrados en el periodo. Revise transacciones de venta o genere asientos automáticos en el Libro Diario."
+        "No hay ingresos acumulados registrados hasta el periodo. Revise transacciones de venta o genere asientos automáticos en el Libro Diario."
       );
     }
 
     if (costMetrics.margenBruto !== null && costMetrics.margenBruto < 10) {
       insights.push(
-        "El margen bruto es bajo. Conviene revisar precios de venta, condiciones de compra o mezcla de productos."
+        "El margen bruto acumulado es bajo. Conviene revisar precios de venta, condiciones de compra o mezcla de productos."
       );
     }
 
     if (income.utilidadNeta < 0) {
       insights.push(
-        "El periodo presenta pérdida neta. Es necesario reducir gastos, renegociar compras o aumentar ventas."
+        "El acumulado del periodo presenta pérdida neta. Es necesario reducir gastos, renegociar compras o aumentar ventas."
       );
     } else if (income.utilidadNeta > 0) {
       insights.push(
-        "El periodo presenta utilidad neta positiva. Mantener control documental y cierre oportuno ayuda a sostener el resultado."
+        "El acumulado del periodo presenta utilidad neta positiva. Mantener control documental y cierre oportuno ayuda a sostener el resultado."
       );
     }
 
     if (indicators.liquidezCorriente !== null && indicators.liquidezCorriente < 1) {
       insights.push(
-        "La liquidez corriente es menor a 1. El activo corriente no cubre completamente el pasivo corriente del periodo."
+        "La liquidez corriente es menor a 1. El activo corriente no cubre completamente el pasivo corriente acumulado."
       );
     }
 
@@ -413,11 +438,11 @@ window.CC_COSTOS = (function () {
       if (income.totalIngresos < breakeven.peContable) {
         const falta = round2(breakeven.peContable - income.totalIngresos);
         insights.push(
-          `Las ventas están por debajo del punto de equilibrio contable. Faltarían aproximadamente ${window.CC_UTILS.formatMoney(falta)} para cubrir costos fijos registrados.`
+          `Las ventas acumuladas están por debajo del punto de equilibrio contable. Faltarían aproximadamente ${window.CC_UTILS.formatMoney(falta)} para cubrir costos fijos registrados.`
         );
       } else {
         insights.push(
-          "Las ventas superan el punto de equilibrio contable del periodo, según gastos operativos registrados."
+          "Las ventas acumuladas superan el punto de equilibrio contable del periodo, según gastos operativos registrados."
         );
       }
     } else if (breakeven.motivoNoCalculable) {
@@ -426,7 +451,7 @@ window.CC_COSTOS = (function () {
 
     if (indicators.rotacionInventario === null) {
       insights.push(
-        "No es posible calcular rotación de inventario porque la cuenta 1.1.04 no tiene saldo relevante en el periodo."
+        "No es posible calcular rotación de inventario porque la cuenta 1.1.04 no tiene saldo relevante en el periodo acumulado."
       );
     }
 
@@ -472,7 +497,7 @@ window.CC_COSTOS = (function () {
       includeClosing: false
     });
 
-    const taxes = getTaxes(clientId, periodoId);
+    const taxes = getTaxes(clientId, ctx, currentKey);
     const income = computeIncome(balances, taxes);
     const balanceSheet = computeBalanceSheet(balances, income, taxes);
     const costMetrics = computeCostMetrics(income);
