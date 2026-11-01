@@ -2,19 +2,18 @@
    Cuentas Claras MVP
    Configuración general del sistema
    Versión contable completa: Fase 16 (menú colapsable + documentación)
+   ✅ CORREGIDO: plan de cuentas alineado con Balanza 5.7 y EE.FF. 5.9/5.10
    ========================================================= */
 
 window.CC_CONFIG = {
   appName: "Cuentas Claras MVP",
   appTitle: "Cuentas Claras – Gestión Contable Digital",
   appSubtitle: "Modelo de gestión contable digital para microempresas",
-  version: "0.2.0",
+  version: "0.2.1",
   storageVersion: 2,
 
-  // Prefixo técnico para claves de LocalStorage
   storagePrefix: "cc_",
 
-  // Claves de almacenamiento
   keys: {
     version: "cc_storage_version",
     session: "cc_session",
@@ -37,7 +36,6 @@ window.CC_CONFIG = {
     counters: "cc_counters"
   },
 
-  // Rutas relativas compatibles con GitHub Pages
   routes: {
     landing: "./index.html",
     login: "./login.html",
@@ -57,181 +55,59 @@ window.CC_CONFIG = {
     reportes: "./reportes.html",
     respaldo: "./respaldo.html",
     ayuda: "./ayuda.html",
-    documentacion: "./documentacion.html", // FASE 16
+    documentacion: "./documentacion.html",
     notFound: "./404.html"
   },
 
-  // Rutas públicas que no requieren sesión
   publicRoutes: [
     "./index.html",
     "./login.html",
     "./404.html",
-    "./documentacion.html" // FASE 16: documentación accesible sin login
+    "./documentacion.html"
   ],
 
-  // Ruta por defecto después de iniciar sesión
   defaultPrivateRoute: "./dashboard.html",
-
-  // Ruta por defecto si intenta entrar sin sesión
   defaultPublicRoute: "./login.html",
 
-  // Menú principal del sistema interno
   menu: [
-    {
-      id: "dashboard",
-      label: "Inicio",
-      href: "./dashboard.html",
-      icon: "bi-speedometer2",
-      page: "dashboard"
-    },
-    {
-      id: "clientes",
-      label: "Clientes",
-      href: "./clientes.html",
-      icon: "bi-shop",
-      page: "clientes"
-    },
-    {
-      id: "periodos",
-      label: "Periodos",
-      href: "./periodos.html",
-      icon: "bi-calendar3",
-      page: "periodos"
-    },
-    {
-      id: "documentos",
-      label: "Documentos",
-      href: "./documentos.html",
-      icon: "bi-file-earmark-text",
-      page: "documentos"
-    },
-    {
-      id: "transacciones",
-      label: "Transacciones",
-      href: "./transacciones.html",
-      icon: "bi-cash-coin",
-      page: "transacciones"
-    },
-    {
-      id: "impuestos",
-      label: "Impuestos",
-      href: "./impuestos.html",
-      icon: "bi-percent",
-      page: "impuestos"
-    },
-    {
-      id: "libro-diario",
-      label: "Libro Diario",
-      href: "./libro-diario.html",
-      icon: "bi-journal-bookmark",
-      page: "libro-diario"
-    },
-    {
-      id: "libro-mayor",
-      label: "Libro Mayor",
-      href: "./libro-mayor.html",
-      icon: "bi-journal-text",
-      page: "libro-mayor"
-    },
-    {
-      id: "balanza",
-      label: "Balanza",
-      href: "./balanza.html",
-      icon: "bi-list-columns",
-      page: "balanza"
-    },
-    {
-      id: "ajustes",
-      label: "Ajustes",
-      href: "./ajustes.html",
-      icon: "bi-tools",
-      page: "ajustes"
-    },
-    {
-      id: "estados-financieros",
-      label: "Estados Fin.",
-      href: "./estados-financieros.html",
-      icon: "bi-graph-up-arrow",
-      page: "estados-financieros"
-    },
-    {
-      id: "costos-indicadores",
-      label: "Costos e Indic.",
-      href: "./costos-indicadores.html",
-      icon: "bi-clipboard-data",
-      page: "costos-indicadores"
-    },
-    {
-      id: "alertas",
-      label: "Alertas",
-      href: "./alertas.html",
-      icon: "bi-bell",
-      page: "alertas"
-    },
-    {
-      id: "reportes",
-      label: "Reportes",
-      href: "./reportes.html",
-      icon: "bi-file-earmark-bar-graph",
-      page: "reportes"
-    },
-    {
-      id: "respaldo",
-      label: "Respaldo",
-      href: "./respaldo.html",
-      icon: "bi-hdd-stack",
-      page: "respaldo"
-    },
-    {
-      id: "ayuda",
-      label: "Ayuda",
-      href: "./ayuda.html",
-      icon: "bi-question-circle",
-      page: "ayuda"
-    },
-    {
-      id: "documentacion", // FASE 16
-      label: "Documentación",
-      href: "./documentacion.html",
-      icon: "bi-book",
-      page: "documentacion"
-    }
+    { id: "dashboard", label: "Inicio", href: "./dashboard.html", icon: "bi-speedometer2", page: "dashboard" },
+    { id: "clientes", label: "Clientes", href: "./clientes.html", icon: "bi-shop", page: "clientes" },
+    { id: "periodos", label: "Periodos", href: "./periodos.html", icon: "bi-calendar3", page: "periodos" },
+    { id: "documentos", label: "Documentos", href: "./documentos.html", icon: "bi-file-earmark-text", page: "documentos" },
+    { id: "transacciones", label: "Transacciones", href: "./transacciones.html", icon: "bi-cash-coin", page: "transacciones" },
+    { id: "impuestos", label: "Impuestos", href: "./impuestos.html", icon: "bi-percent", page: "impuestos" },
+    { id: "libro-diario", label: "Libro Diario", href: "./libro-diario.html", icon: "bi-journal-bookmark", page: "libro-diario" },
+    { id: "libro-mayor", label: "Libro Mayor", href: "./libro-mayor.html", icon: "bi-journal-text", page: "libro-mayor" },
+    { id: "balanza", label: "Balanza", href: "./balanza.html", icon: "bi-list-columns", page: "balanza" },
+    { id: "ajustes", label: "Ajustes", href: "./ajustes.html", icon: "bi-tools", page: "ajustes" },
+    { id: "estados-financieros", label: "Estados Fin.", href: "./estados-financieros.html", icon: "bi-graph-up-arrow", page: "estados-financieros" },
+    { id: "costos-indicadores", label: "Costos e Indic.", href: "./costos-indicadores.html", icon: "bi-clipboard-data", page: "costos-indicadores" },
+    { id: "alertas", label: "Alertas", href: "./alertas.html", icon: "bi-bell", page: "alertas" },
+    { id: "reportes", label: "Reportes", href: "./reportes.html", icon: "bi-file-earmark-bar-graph", page: "reportes" },
+    { id: "respaldo", label: "Respaldo", href: "./respaldo.html", icon: "bi-hdd-stack", page: "respaldo" },
+    { id: "ayuda", label: "Ayuda", href: "./ayuda.html", icon: "bi-question-circle", page: "ayuda" },
+    { id: "documentacion", label: "Documentación", href: "./documentacion.html", icon: "bi-book", page: "documentacion" }
   ],
 
-  // Roles permitidos
   roles: {
     administrador: "administrador",
     contador: "contador",
     consulta: "consulta"
   },
 
-  // Credenciales de demostración para prototipo académico
   demoCredentials: [
-    {
-      usuario: "admin",
-      password: "Admin123",
-      rol: "administrador",
-      nombre: "Administrador"
-    },
-    {
-      usuario: "contador",
-      password: "Contador123",
-      rol: "contador",
-      nombre: "Contador"
-    }
+    { usuario: "admin", password: "Admin123", rol: "administrador", nombre: "Administrador" },
+    { usuario: "contador", password: "Contador123", rol: "contador", nombre: "Contador" }
   ],
 
-  // Moneda y formato local
   currency: "Bs",
   locale: "es-BO",
 
-  // Tasas referenciales para prototipo
   taxRates: {
     IVA: 0.13,
     IT: 0.03
   },
 
-  // Regímenes tributarios de referencia
   regimes: [
     "Régimen General",
     "Régimen Simplificado",
@@ -239,7 +115,6 @@ window.CC_CONFIG = {
     "Por definir"
   ],
 
-  // Tipos de negocio sugeridos
   businessTypes: [
     "Abarrotes",
     "Tienda de barrio",
@@ -251,42 +126,42 @@ window.CC_CONFIG = {
     "Otro"
   ],
 
-  // Tipos documentales
   documentTypes: [
     { value: "factura_venta", label: "Factura de venta" },
     { value: "factura_compra", label: "Factura de compra" },
     { value: "recibo", label: "Recibo" },
     { value: "nota", label: "Nota" },
     { value: "extracto", label: "Extracto bancario" },
+    { value: "planilla_sueldos", label: "Planilla de sueldos" }, // ✅ NUEVO (para alertas)
     { value: "otro", label: "Otro documento" }
   ],
 
-  // Tipos de transacción
+  // ✅ CORREGIDO: se agregan "aporte" y "compra_activo" para clasificar bien
   transactionTypes: [
     { value: "venta", label: "Venta" },
     { value: "compra", label: "Compra" },
     { value: "gasto", label: "Gasto" },
-    { value: "ingreso", label: "Ingreso" }
+    { value: "ingreso", label: "Ingreso" },
+    { value: "aporte", label: "Aporte de capital" },
+    { value: "compra_activo", label: "Compra de activo fijo" }
   ],
 
-  // Formas de pago sugeridas
   paymentMethods: [
     "efectivo",
     "banco",
     "tarjeta",
     "transferencia",
     "credito",
+    "aporte",
     "otro"
   ],
 
-  // Estados de periodo
   periodStates: [
     { value: "abierto", label: "Abierto" },
     { value: "en_revision", label: "En revisión" },
     { value: "cerrado", label: "Cerrado" }
   ],
 
-  // Estados de documento
   documentStates: [
     { value: "pendiente", label: "Pendiente" },
     { value: "recibido", label: "Recibido" },
@@ -294,13 +169,11 @@ window.CC_CONFIG = {
     { value: "rechazado", label: "Rechazado" }
   ],
 
-  // Estados de transacción
   transactionStates: [
     { value: "activa", label: "Activa" },
     { value: "anulada", label: "Anulada" }
   ],
 
-  // Estados de obligación tributaria
   obligationStates: [
     { value: "pendiente", label: "Pendiente" },
     { value: "en_proceso", label: "En proceso" },
@@ -310,7 +183,6 @@ window.CC_CONFIG = {
     { value: "anulada", label: "Anulada" }
   ],
 
-  // Tipos de asiento contable
   journalEntryTypes: [
     { value: "operacion", label: "Operación" },
     { value: "ajuste", label: "Ajuste" },
@@ -318,7 +190,6 @@ window.CC_CONFIG = {
     { value: "apertura", label: "Apertura" }
   ],
 
-  // Categorías de ajuste contable
   adjustmentCategories: [
     { value: "depreciacion", label: "Depreciación" },
     { value: "amortizacion", label: "Amortización" },
@@ -330,19 +201,16 @@ window.CC_CONFIG = {
     { value: "otro", label: "Otro ajuste" }
   ],
 
-  // Origen del asiento
   journalOrigins: [
     { value: "automatico", label: "Automático" },
     { value: "manual", label: "Manual" }
   ],
 
-  // Estados de asiento
   journalEntryStates: [
     { value: "vigente", label: "Vigente" },
     { value: "anulado", label: "Anulado" }
   ],
 
-  // Tipos de cuenta según estado financiero
   accountTypes: [
     { value: "activo", label: "Activo" },
     { value: "pasivo", label: "Pasivo" },
@@ -352,13 +220,11 @@ window.CC_CONFIG = {
     { value: "gasto", label: "Gasto" }
   ],
 
-  // Naturaleza de saldo
   accountNatures: [
     { value: "deudora", label: "Deudora" },
     { value: "acreedora", label: "Acreedora" }
   ],
 
-  // Tipos de alerta
   alertTypes: [
     { value: "vencimiento_tributario", label: "Vencimiento tributario" },
     { value: "documento_pendiente", label: "Documento pendiente" },
@@ -371,7 +237,6 @@ window.CC_CONFIG = {
     { value: "otro", label: "Otra alerta" }
   ],
 
-  // Niveles de alerta
   alertLevels: [
     { value: "informativa", label: "Informativa" },
     { value: "preventiva", label: "Preventiva" },
@@ -379,7 +244,6 @@ window.CC_CONFIG = {
     { value: "vencida", label: "Vencida" }
   ],
 
-  // Estados de alerta
   alertStates: [
     { value: "pendiente", label: "Pendiente" },
     { value: "vista", label: "Vista" },
@@ -387,14 +251,12 @@ window.CC_CONFIG = {
     { value: "vencida", label: "Vencida" }
   ],
 
-  // Tipos de reporte
   reportTypes: [
     { value: "mensual", label: "Reporte mensual" },
     { value: "borrador", label: "Borrador" },
     { value: "final", label: "Reporte final" }
   ],
 
-  // Estados de reporte
   reportStates: [
     { value: "borrador", label: "Borrador" },
     { value: "generado", label: "Generado" },
@@ -402,59 +264,91 @@ window.CC_CONFIG = {
     { value: "anulado", label: "Anulado" }
   ],
 
-  // Reglas referenciales para prototipo
   genericDueDay: 20,
   alertDaysBefore: 7,
   urgentDaysBefore: 3,
 
-  // Métodos contables del prototipo
   depreciationMethod: "lineal_simple",
   inventoryMethod: "periodico_simplificado",
 
-  // Comportamiento del prototipo
   autoSeedOnFirstRun: true,
   maxAttachmentKB: 300,
 
   /* =========================================================
-     Plan de cuentas simplificado para microempresa comercial
-     Solo cuentas nivel 3 admiten movimientos.
+     ✅ CORREGIDO: Plan de cuentas simplificado para microempresa comercial
+     Alineado con la Balanza de Comprobación 5.7 y los EE.FF. 5.9 / 5.10
+     - 1.2.01 Equipo de computación (7.200) separado de 1.2.02 Mobiliario (800)
+     - 1.2.04 / 1.2.05 / 1.2.06: depreciación y amortización separadas
+     - 2.1.04 renombrada a "Provisión de beneficios sociales por pagar"
+     - 3.1.02 renombrada a "Resultado de arranque"
+     - 6.2.01/02/03 Gastos de personal desglosados
+     - 6.4.01 Gastos por impuestos (IT)
      ========================================================= */
   accountCatalog: [
-    { codigo: "1.1.01", nombre: "Caja", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "Efectivo en mano del comerciante." },
+    // ===== ACTIVO CORRIENTE =====
+    { codigo: "1.1.01", nombre: "Caja y bancos", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "Efectivo en mano y cuentas bancarias." }, // ✅ renombrada
     { codigo: "1.1.02", nombre: "Bancos", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "Cuentas bancarias o monedero digital." },
     { codigo: "1.1.03", nombre: "Clientes / Cuentas por cobrar", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "Ventas a crédito por cobrar." },
     { codigo: "1.1.04", nombre: "Inventario de mercancías", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "Mercadería disponible para venta." },
     { codigo: "1.1.05", nombre: "IVA Crédito Fiscal", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "IVA trasladado en compras, Régimen General." },
     { codigo: "1.1.06", nombre: "Otras cuentas por cobrar", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.1", estado: "activa", observacion: "Préstamos, anticipos u otros cobros." },
-    { codigo: "1.2.01", nombre: "Mobiliario y equipo", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Bienes de uso del negocio." },
-    { codigo: "1.2.02", nombre: "Depreciación acumulada", tipo: "activo", naturaleza: "acreedora", esTemporal: false, esContra: true, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Cuenta compensadora de activos fijos." },
-    { codigo: "1.2.03", nombre: "Intangibles", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Marcas, licencias o software si corresponde." },
+
+    // ===== ACTIVO NO CORRIENTE (✅ CORREGIDO: separado) =====
+    { codigo: "1.2.01", nombre: "Equipo de computación", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Laptops, impresora y equipos de cómputo. Bs 7.200." },
+    { codigo: "1.2.02", nombre: "Mobiliario y equipo de oficina", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Mobiliario básico de oficina. Bs 800." },
+    { codigo: "1.2.03", nombre: "Activo intangible – dominio", tipo: "activo", naturaleza: "deudora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Dominio web y licencias. Bs 200." },
+    { codigo: "1.2.04", nombre: "Depreciación acumulada – equipo", tipo: "activo", naturaleza: "acreedora", esTemporal: false, esContra: true, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Cuenta compensadora del equipo de computación. Al cierre: Bs 1.800." },
+    { codigo: "1.2.05", nombre: "Depreciación acumulada – mobiliario", tipo: "activo", naturaleza: "acreedora", esTemporal: false, esContra: true, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Cuenta compensadora del mobiliario. Al cierre: Bs 160." },
+    { codigo: "1.2.06", nombre: "Amortización acumulada – dominio", tipo: "activo", naturaleza: "acreedora", esTemporal: false, esContra: true, nivel: 3, codigoPadre: "1.2", estado: "activa", observacion: "Cuenta compensadora del intangible. Al cierre: Bs 200." },
+
+    // ===== PASIVO CORRIENTE =====
     { codigo: "2.1.01", nombre: "Proveedores / Cuentas por pagar", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.1", estado: "activa", observacion: "Deudas con proveedores." },
     { codigo: "2.1.02", nombre: "IVA Débito Fiscal", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.1", estado: "activa", observacion: "IVA cobrado en ventas, Régimen General." },
     { codigo: "2.1.03", nombre: "Impuestos por pagar", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.1", estado: "activa", observacion: "IT, RC-IVA, IUE u otros impuestos por pagar." },
-    { codigo: "2.1.04", nombre: "Sueldos y salarios por pagar", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.1", estado: "activa", observacion: "Obligaciones laborales devengadas." },
+    { codigo: "2.1.04", nombre: "Provisión de beneficios sociales por pagar", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.1", estado: "activa", observacion: "Aguinaldo, prima, vacaciones e indemnización devengados. Al cierre: Bs 3.300." }, // ✅ renombrada
     { codigo: "2.1.05", nombre: "Otros pasivos corrientes", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.1", estado: "activa", observacion: "Otros compromisos de corto plazo." },
+
+    // ===== PASIVO NO CORRIENTE =====
     { codigo: "2.2.01", nombre: "Préstamos a largo plazo", tipo: "pasivo", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "2.2", estado: "activa", observacion: "Deudas financieras de largo plazo." },
-    { codigo: "3.1.01", nombre: "Capital / Aportes del propietario", tipo: "patrimonio", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "3.1", estado: "activa", observacion: "Aportes del dueño o socia/o." },
-    { codigo: "3.1.02", nombre: "Resultados acumulados", tipo: "patrimonio", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "3.1", estado: "activa", observacion: "Utilidades o pérdidas de periodos anteriores." },
-    { codigo: "3.1.03", nombre: "Resultados del ejercicio", tipo: "patrimonio", naturaleza: "acreedora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "3.1", estado: "activa", observacion: "Cuenta puente para cierre del periodo." },
-    { codigo: "4.1.01", nombre: "Ventas", tipo: "ingreso", naturaleza: "acreedora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "4.1", estado: "activa", observacion: "Ingresos por venta de mercancía o servicios." },
-    { codigo: "4.1.02", nombre: "Otros ingresos", tipo: "ingreso", naturaleza: "acreedora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "4.1", estado: "activa", observacion: "Ingresos no operativos o accesorios." },
-    { codigo: "5.1.01", nombre: "Compras / Costo de ventas", tipo: "costo", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "5.1", estado: "activa", observacion: "Costo de mercancía vendida o compras del periodo." },
+
+    // ===== PATRIMONIO =====
+    { codigo: "3.1.01", nombre: "Capital social", tipo: "patrimonio", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "3.1", estado: "activa", observacion: "Aportes del dueño o socia/o. Bs 10.800." }, // ✅ renombrada
+    { codigo: "3.1.02", nombre: "Resultado de arranque (gastos de constitución)", tipo: "patrimonio", naturaleza: "acreedora", esTemporal: false, esContra: false, nivel: 3, codigoPadre: "3.1", estado: "activa", observacion: "Gastos preoperativos de Bs 1.000 reconocidos contra patrimonio de apertura." }, // ✅ renombrada
+    { codigo: "3.1.03", nombre: "Resultados del ejercicio", tipo: "patrimonio", naturaleza: "acreedora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "3.1", estado: "activa", observacion: "Cuenta puente para cierre del periodo. Al cierre año 1: Bs 13.031." },
+
+    // ===== INGRESOS =====
+    { codigo: "4.1.01", nombre: "Ingresos por servicios", tipo: "ingreso", naturaleza: "acreedora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "4.1", estado: "activa", observacion: "Paquetes de servicio contable. Al cierre: Bs 41.850." }, // ✅ renombrada
+    { codigo: "4.1.02", nombre: "Otros ingresos", tipo: "ingreso", naturaleza: "acreedora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "4.1", estado: "activa", observacion: "Talleres y asesorías. Al cierre: Bs 7.600." },
+
+    // ===== COSTOS =====
+    { codigo: "5.1.01", nombre: "Costo de servicios prestados", tipo: "costo", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "5.1", estado: "activa", observacion: "Costos variables por cliente atendido. Al cierre: Bs 3.255." }, // ✅ renombrada
     { codigo: "5.1.02", nombre: "Devoluciones y descuentos sobre compras", tipo: "costo", naturaleza: "acreedora", esTemporal: true, esContra: true, nivel: 3, codigoPadre: "5.1", estado: "activa", observacion: "Cuenta compensadora de costos." },
-    { codigo: "6.1.01", nombre: "Gastos de administración", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Alquiler, servicios básicos, papelería, administración." },
-    { codigo: "6.1.02", nombre: "Gastos de venta", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Transporte, publicidad, comisiones, entrega." },
-    { codigo: "6.1.03", nombre: "Gastos financieros", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Intereses, comisiones bancarias, costos financieros." },
-    { codigo: "6.1.04", nombre: "Depreciación y amortización", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Gasto por depreciación de activos fijos." },
-    { codigo: "6.1.05", nombre: "Otros gastos", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Gastos no clasificados en otras cuentas." }
+
+    // ===== GASTOS OPERATIVOS =====
+    { codigo: "6.1.01", nombre: "Gastos operativos fijos", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Internet, energía, telefonía, transporte y soporte. Al cierre: Bs 4.440." }, // ✅ renombrada
+    { codigo: "6.1.02", nombre: "Gastos de venta", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Transporte, publicidad, comisiones." },
+    { codigo: "6.1.03", nombre: "Gastos financieros", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Intereses, comisiones bancarias." },
+    { codigo: "6.1.04", nombre: "Depreciación y amortización", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Gasto por depreciación y amortización. Al cierre: Bs 2.160." },
+    { codigo: "6.1.05", nombre: "Otros gastos", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.1", estado: "activa", observacion: "Gastos no clasificados." },
+
+    // ===== GASTOS DE PERSONAL (✅ NUEVAS: desglosadas) =====
+    { codigo: "6.2.01", nombre: "Gastos de personal – sueldos", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.2", estado: "activa", observacion: "Sueldo bruto del personal. 6 meses × Bs 3.300 = Bs 19.800." },
+    { codigo: "6.2.02", nombre: "Gastos de personal – CNS 10%", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.2", estado: "activa", observacion: "Aporte patronal al seguro de salud. 6 meses × Bs 330 = Bs 1.980." },
+    { codigo: "6.2.03", nombre: "Gastos de personal – provisión BS", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.2", estado: "activa", observacion: "Provisión de beneficios sociales. 6 meses × Bs 550 = Bs 3.300." },
+
+    // ===== GASTOS POR IMPUESTOS (✅ NUEVA) =====
+    { codigo: "6.4.01", nombre: "Gastos por impuestos (IT)", tipo: "gasto", naturaleza: "deudora", esTemporal: true, esContra: false, nivel: 3, codigoPadre: "6.4", estado: "activa", observacion: "IT referencial 3% sobre ingresos. Al cierre: Bs 1.484." }
   ],
 
   /* =========================================================
-     Mapeo desde el nombre simple usado en transacciones
-     hacia el código del plan de cuentas.
+     ✅ CORREGIDO: Mapeo desde nombre simple hacia código de cuenta.
+     Se agregan los nuevos códigos y se mantiene retrocompatibilidad
+     con los nombres antiguos.
      ========================================================= */
   accountMapping: {
+    // Activos corrientes
     "Caja": "1.1.01",
+    "Caja y bancos": "1.1.01",
     "Bancos": "1.1.02",
     "Cuentas por cobrar": "1.1.03",
     "Clientes / Cuentas por cobrar": "1.1.03",
@@ -462,37 +356,69 @@ window.CC_CONFIG = {
     "Inventario de mercancías": "1.1.04",
     "IVA Crédito Fiscal": "1.1.05",
     "Otras cuentas por cobrar": "1.1.06",
-    "Mobiliario y equipo": "1.2.01",
-    "Depreciación acumulada": "1.2.02",
-    "Intangibles": "1.2.03",
+
+    // Activos no corrientes (separados)
+    "Equipo de computación": "1.2.01",
+    "Mobiliario y equipo de oficina": "1.2.02",
+    "Mobiliario y equipo": "1.2.02", // compatibilidad con datos antiguos
+    "Activo intangible – dominio": "1.2.03",
+    "Intangibles": "1.2.03", // compatibilidad con datos antiguos
+    "Depreciación acumulada – equipo": "1.2.04",
+    "Depreciación acumulada – mobiliario": "1.2.05",
+    "Amortización acumulada – dominio": "1.2.06",
+    "Depreciación acumulada": "1.2.04", // compatibilidad con datos antiguos
+
+    // Pasivos
     "Cuentas por pagar": "2.1.01",
     "Proveedores / Cuentas por pagar": "2.1.01",
     "IVA Débito Fiscal": "2.1.02",
     "Impuestos por pagar": "2.1.03",
-    "Sueldos y salarios por pagar": "2.1.04",
+    "Provisión de beneficios sociales por pagar": "2.1.04",
+    "Sueldos y salarios por pagar": "2.1.04", // compatibilidad con datos antiguos
     "Otros pasivos corrientes": "2.1.05",
     "Préstamos a largo plazo": "2.2.01",
+
+    // Patrimonio
     "Capital": "3.1.01",
+    "Capital social": "3.1.01",
     "Aportes del propietario": "3.1.01",
-    "Resultados acumulados": "3.1.02",
+    "Resultado de arranque (gastos de constitución)": "3.1.02",
+    "Resultados acumulados": "3.1.02", // compatibilidad con datos antiguos
     "Resultados del ejercicio": "3.1.03",
-    "Ventas": "4.1.01",
+
+    // Ingresos
+    "Ingresos por servicios": "4.1.01",
+    "Ventas": "4.1.01", // compatibilidad con datos antiguos
     "Otros ingresos": "4.1.02",
-    "Costo de ventas": "5.1.01",
-    "Compras": "5.1.01",
-    "Compras / Costo de ventas": "5.1.01",
+
+    // Costos
+    "Costo de servicios prestados": "5.1.01",
+    "Costo de ventas": "5.1.01", // compatibilidad con datos antiguos
+    "Compras": "5.1.01", // compatibilidad con datos antiguos
+    "Compras / Costo de ventas": "5.1.01", // compatibilidad con datos antiguos
     "Devoluciones y descuentos sobre compras": "5.1.02",
-    "Gastos de administración": "6.1.01",
+
+    // Gastos operativos
+    "Gastos operativos fijos": "6.1.01",
+    "Gastos de administración": "6.1.01", // compatibilidad con datos antiguos
     "Alquiler": "6.1.01",
     "Servicios básicos": "6.1.01",
     "Gastos de venta": "6.1.02",
     "Transporte": "6.1.02",
     "Gastos financieros": "6.1.03",
     "Depreciación y amortización": "6.1.04",
-    "Otros gastos": "6.1.05"
+    "Otros gastos": "6.1.05",
+
+    // Gastos de personal (nuevos)
+    "Gastos de personal – sueldos": "6.2.01",
+    "Sueldos y cargas sociales": "6.2.01", // compatibilidad con transacciones antiguas
+    "Gastos de personal – CNS 10%": "6.2.02",
+    "Gastos de personal – provisión BS": "6.2.03",
+
+    // Gastos por impuestos (nuevo)
+    "Gastos por impuestos (IT)": "6.4.01"
   },
 
-  // Mensajes globales visibles para el usuario
   messages: {
     localStorageWarning:
       "Los datos de este prototipo se guardan en el navegador. Exporte respaldos JSON periódicamente.",
@@ -510,7 +436,6 @@ window.CC_CONFIG = {
       "Modo demostración activo. Puede cargar datos semilla para probar el flujo completo."
   },
 
-  // Texto legal breve para pies de página
   legalFooter:
     "Cuentas Claras – Prototipo académico de Contabilidad · Trinidad, Beni, Bolivia · 2026"
 };

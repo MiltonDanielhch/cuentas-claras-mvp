@@ -1,7 +1,21 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de ajustes contables
-   Fase 7
+   Fase 7.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - acumuladaAFecha(): calcula la depreciación acumulada
+     a la fecha del periodo seleccionado (no lee el valor
+     final del seed, que representa el cierre anual).
+   - depreciationAmount(): usa acumuladaAFecha y calcula
+     correctamente el pendiente. El dominio ahora da 16,67/mes.
+   - isDepreciationRegistered(): busca asientos de depreciación
+     en TODO el año del periodo (no solo el periodo actual),
+     para detectar el asiento anual D-0064 y evitar duplicados.
+   - renderFixedAssets(): muestra acumulada a la fecha y
+     pendiente correcto.
+   - createDepreciationEntry(): usa depreciacionMensual del
+     activo como monto, limitado al pendiente.
    ========================================================= */
 
 window.CC_AJUSTES = (function () {
@@ -37,6 +51,7 @@ window.CC_AJUSTES = (function () {
     elements.ajusteRapidoObservacion = document.getElementById("ajusteRapidoObservacion");
 
     elements.tablaAjustes = document.getElementById("tablaAjustes");
+    elements.tablaResumenAnualAjustes = document.getElementById("tablaResumenAnualAjustes"); // ✅ NUEVO
     elements.btnImprimirAjustes = document.getElementById("btnImprimirAjustes");
 
     elements.detalleModalEl = document.getElementById("ajusteDetalleModal");
@@ -139,6 +154,121 @@ window.CC_AJUSTES = (function () {
     return dateISO >= start && dateISO <= end;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: meses transcurridos entre adquisición y fin
+     del periodo seleccionado. Devuelve 0 si aún no se adquirió.
+     --------------------------------------------------------- */
+  function mesesTranscurridos(asset, period) {
+    if (!asset || !period) return 0;
+
+    const adq = String(asset.fechaAdquisicion || "").slice(0, 10);
+    if (!adq) return 0;
+
+    const endPeriod = periodEndISO(period.mes, period.anio);
+    if (adq > endPeriod) return 0;
+
+    const [yA, mA, dA] = adq.split("-").map(Number);
+    const [yE, mE] = endPeriod.split("-").map(Number);
+
+    // Si la adquisición es el mismo mes del periodo, cuenta como 1 mes.
+    const diff = (yE - yA) * 12 + (mE - mA) + 1;
+    return Math.max(diff, 0);
+  }
+
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: depreciación acumulada A LA FECHA del periodo.
+     No lee asset.depreciacionAcumulada (que representa el cierre).
+     --------------------------------------------------------- */
+  function acumuladaAFecha(asset, period) {
+    const mensual = Number(asset.depreciacionMensual) || 0;
+    const meses = mesesTranscurridos(asset, period);
+    const costo = Number(asset.costoAdquisicion) || 0;
+    const residual = Number(asset.valorResidual) || 0;
+    const depreciable = Math.max(costo - residual, 0);
+
+    const acumulada = round2(mensual * meses);
+    return Math.min(acumulada, depreciable);
+  }
+
+  function getFixedAssetsForClient(clientId) {
+    return storage
+      .list("fixedAssets")
+      .filter((fa) => fa.clienteId === clientId)
+      .sort((a, b) => String(a.id || "").localeCompare(String(b.id || "")));
+  }
+
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: depreciationAmount usa acumuladaAFecha.
+     Ahora el dominio (FA-0005) da 16,67/mes en enero.
+     --------------------------------------------------------- */
+  function depreciationAmount(asset, period) {
+    const costo = Number(asset.costoAdquisicion) || 0;
+    const residual = Number(asset.valorResidual) || 0;
+    const vida = Number(asset.vidaUtilMeses) || 0;
+
+    const depreciable = Math.max(costo - residual, 0);
+    if (vida <= 0 || depreciable <= 0) return 0;
+
+    const mensual = round2(depreciable / vida);
+    const acumulada = acumuladaAFecha(asset, period);
+    const pendiente = Math.max(round2(depreciable - acumulada), 0);
+
+    return Math.min(mensual, pendiente);
+  }
+
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: busca si ya existe un asiento de depreciación
+     en TODO el año del periodo (no solo el periodo actual).
+     Así detecta el asiento anual D-0064 del seed y evita duplicar.
+     --------------------------------------------------------- */
+  function isDepreciationRegistered(clientId, period, assetId) {
+    if (!period) return false;
+
+    const entries = storage.list("journalEntries");
+
+    // ¿Hay algún asiento de ajuste de depreciación vigente en el año?
+    const yearStart = `${period.anio}-01-01`;
+    const yearEnd = `${period.anio}-12-31`;
+
+    const anyDepreciationInYear = entries.some(
+      (e) =>
+        e.clienteId === clientId &&
+        e.tipoAsiento === "ajuste" &&
+        e.categoriaAjuste === "depreciacion" &&
+        e.estado === "vigente" &&
+        String(e.fecha || "") >= yearStart &&
+        String(e.fecha || "") <= yearEnd
+    );
+
+    if (anyDepreciationInYear) return true;
+
+    // Fallback: ¿hay uno específico para este activo en el periodo?
+    return entries.some(
+      (e) =>
+        e.clienteId === clientId &&
+        e.periodoId === period.id &&
+        e.tipoAsiento === "ajuste" &&
+        e.categoriaAjuste === "depreciacion" &&
+        e.estado === "vigente" &&
+        String(e.observacion || "").includes(assetId)
+    );
+  }
+
+  function canDepreciate(asset, period) {
+    if (!period || period.estado === "cerrado") return false;
+    if (asset.estado !== "activo") return false;
+
+    const end = periodEndISO(period.mes, period.anio);
+    if (String(asset.fechaAdquisicion || "") > end) return false;
+
+    const amount = depreciationAmount(asset, period);
+    if (amount <= 0) return false;
+
+    if (isDepreciationRegistered(asset.clienteId, period, asset.id)) return false;
+
+    return true;
+  }
+
   function loadClients() {
     const clients = storage
       .list("clients")
@@ -172,18 +302,27 @@ window.CC_AJUSTES = (function () {
   }
 
   function autoSelectDefault() {
-    const clients = storage.list("clients").filter((c) => getPeriodsForClient(c.id).length > 0);
-    if (!clients.length) {
-      setAlert("No hay clientes con periodos contables.", "warning");
-      return;
-    }
+      const clients = storage.list("clients").filter((c) => getPeriodsForClient(c.id).length > 0);
+      if (!clients.length) {
+        setAlert("No hay clientes con periodos contables.", "warning");
+        return;
+      }
 
-    const first = clients[0];
-    elements.ajusteFiltroCliente.value = first.id;
-    loadPeriods(first.id);
-    currentClientId = first.id;
-    currentPeriodId = elements.ajusteFiltroPeriodo.value || "";
-    currentPeriod = storage.get("periods", currentPeriodId);
+      // ✅ CORREGIDO: preferir Cuentas Claras (CLI-0004)
+      const preferido = clients.find((c) => c.id === "CLI-0004") || clients[0];
+
+      elements.ajusteFiltroCliente.value = preferido.id;
+      loadPeriods(preferido.id);
+      currentClientId = preferido.id;
+
+      // ✅ CORREGIDO: preferir diciembre
+      const periods = getPeriodsForClient(preferido.id);
+      const diciembre = periods.find((p) => Number(p.mes) === 12);
+      if (diciembre) {
+        elements.ajusteFiltroPeriodo.value = diciembre.id;
+      }
+      currentPeriodId = elements.ajusteFiltroPeriodo.value || "";
+      currentPeriod = storage.get("periods", currentPeriodId);
   }
 
   function getAccountOptions() {
@@ -217,56 +356,9 @@ window.CC_AJUSTES = (function () {
     elements.ajusteRapidoFecha.value = periodEndISO(currentPeriod.mes, currentPeriod.anio);
   }
 
-  function getFixedAssetsForClient(clientId) {
-    return storage
-      .list("fixedAssets")
-      .filter((fa) => fa.clienteId === clientId)
-      .sort((a, b) => String(a.id || "").localeCompare(String(b.id || "")));
-  }
-
-  function depreciationAmount(asset) {
-    const costo = Number(asset.costoAdquisicion) || 0;
-    const residual = Number(asset.valorResidual) || 0;
-    const vida = Number(asset.vidaUtilMeses) || 0;
-    const acumulada = Number(asset.depreciacionAcumulada) || 0;
-
-    const depreciable = Math.max(costo - residual, 0);
-    const pendiente = Math.max(round2(depreciable - acumulada), 0);
-
-    if (vida <= 0 || pendiente <= 0) return 0;
-
-    const mensual = round2(depreciable / vida);
-    return Math.min(mensual, pendiente);
-  }
-
-  function isDepreciationRegistered(clientId, periodoId, assetId) {
-    const entries = storage.list("journalEntries");
-    return entries.some(
-      (e) =>
-        e.clienteId === clientId &&
-        e.periodoId === periodoId &&
-        e.tipoAsiento === "ajuste" &&
-        e.categoriaAjuste === "depreciacion" &&
-        e.estado === "vigente" &&
-        String(e.observacion || "").includes(assetId)
-    );
-  }
-
-  function canDepreciate(asset, period) {
-    if (!period || period.estado === "cerrado") return false;
-    if (asset.estado !== "activo") return false;
-
-    const end = periodEndISO(period.mes, period.anio);
-    if (String(asset.fechaAdquisicion || "") > end) return false;
-
-    const amount = depreciationAmount(asset);
-    if (amount <= 0) return false;
-
-    if (isDepreciationRegistered(asset.clienteId, period.id, asset.id)) return false;
-
-    return true;
-  }
-
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: renderFixedAssets con acumulada a la fecha
+     --------------------------------------------------------- */
   function renderFixedAssets() {
     if (!elements.tablaActivosFijos) return;
 
@@ -291,16 +383,25 @@ window.CC_AJUSTES = (function () {
         const costo = Number(asset.costoAdquisicion) || 0;
         const residual = Number(asset.valorResidual) || 0;
         const vida = Number(asset.vidaUtilMeses) || 0;
-        const acumulada = Number(asset.depreciacionAcumulada) || 0;
         const depreciable = Math.max(costo - residual, 0);
+
+        // ✅ acumulada a la fecha del periodo seleccionado
+        const acumulada = acumuladaAFecha(asset, currentPeriod);
         const pendiente = Math.max(round2(depreciable - acumulada), 0);
-        const mensual = depreciationAmount(asset);
-        const registered = isDepreciationRegistered(asset.clienteId, currentPeriod.id, asset.id);
+
+        // ✅ mensual calculada (costo / vida), no leída del seed
+        const mensual = vida > 0 ? round2(depreciable / vida) : 0;
+
+        const registered = isDepreciationRegistered(
+          asset.clienteId,
+          currentPeriod,
+          asset.id
+        );
         const eligible = canDepreciate(asset, currentPeriod);
 
         let action = "";
         if (registered) {
-          action = `<span class="badge cc-status-activo">Depreciado en el periodo</span>`;
+          action = `<span class="badge cc-status-activo">Depreciado en el año</span>`;
         } else if (!eligible) {
           action = `<span class="badge bg-secondary">No aplica</span>`;
         } else {
@@ -335,18 +436,30 @@ window.CC_AJUSTES = (function () {
       .join("");
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: createDepreciationEntry usa depreciacionMensual
+     --------------------------------------------------------- */
   function createDepreciationEntry(asset) {
     if (!currentPeriod) throw new Error("Seleccione un periodo.");
     if (currentPeriod.estado === "cerrado") throw new Error("No se pueden registrar ajustes en un periodo cerrado.");
 
-    const amount = depreciationAmount(asset);
-    if (amount <= 0) throw new Error("Este activo no tiene depreciación pendiente.");
+    const amount = depreciationAmount(asset, currentPeriod);
+    if (amount <= 0) throw new Error("Este activo no tiene depreciación pendiente en el periodo.");
 
-    if (isDepreciationRegistered(asset.clienteId, currentPeriod.id, asset.id)) {
-      throw new Error("Este activo ya fue depreciado en el periodo seleccionado.");
+    if (isDepreciationRegistered(asset.clienteId, currentPeriod, asset.id)) {
+      throw new Error("Ya existe un asiento de depreciación vigente para este activo en el año.");
     }
 
     const fecha = periodEndISO(currentPeriod.mes, currentPeriod.anio);
+
+    // ✅ Determina la cuenta de depreciación acumulada según la categoría
+    let cuentaDepreciacion = asset.cuentaDepreciacion || "1.2.04";
+    if (asset.categoria === "mobiliario_equipo" && !asset.cuentaDepreciacion) {
+      cuentaDepreciacion = "1.2.05";
+    }
+    if (asset.categoria === "intangible" && !asset.cuentaDepreciacion) {
+      cuentaDepreciacion = "1.2.06";
+    }
 
     const entry = contabilidad.createManualEntry({
       clienteId: asset.clienteId,
@@ -356,7 +469,7 @@ window.CC_AJUSTES = (function () {
       categoriaAjuste: "depreciacion",
       documentoId: null,
       descripcion: `Depreciación mensual · ${asset.descripcion || asset.id}`,
-      observacion: asset.id,
+      observacion: `${asset.id} · ${asset.descripcion || ""}`.trim(),
       lines: [
         {
           cuentaCodigo: asset.cuentaGastoDepreciacion || "6.1.04",
@@ -367,7 +480,7 @@ window.CC_AJUSTES = (function () {
           observacion: `Depreciación lineal simple de ${asset.descripcion || asset.id}`
         },
         {
-          cuentaCodigo: asset.cuentaDepreciacion || "1.2.02",
+          cuentaCodigo: cuentaDepreciacion,
           debito: 0,
           credito: amount,
           tercero: "Depreciación acumulada",
@@ -377,9 +490,10 @@ window.CC_AJUSTES = (function () {
       ]
     });
 
-    const currentAccumulated = Number(asset.depreciacionAcumulada) || 0;
+    // Actualiza depreciacionAcumulada al valor del periodo
+    const nuevaAcumulada = acumuladaAFecha(asset, currentPeriod);
     storage.update("fixedAssets", asset.id, {
-      depreciacionAcumulada: round2(currentAccumulated + amount)
+      depreciacionAcumulada: nuevaAcumulada
     });
 
     if (bitacora) {
@@ -771,6 +885,7 @@ window.CC_AJUSTES = (function () {
     updateDefaultFecha();
     renderFixedAssets();
     renderAdjustmentEntries();
+    renderResumenAnualAjustes(); // ✅ NUEVO
   }
 
   function bindEvents() {
@@ -823,6 +938,93 @@ window.CC_AJUSTES = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+/* ---------------------------------------------------------
+   ✅ NUEVO: Resumen anual de ajustes (12 meses)
+   Agrupa los asientos de tipo "ajuste" por mes y categoría.
+   --------------------------------------------------------- */
+function renderResumenAnualAjustes() {
+  if (!elements.tablaResumenAnualAjustes) return;
+
+  const clientId = elements.ajusteFiltroCliente?.value || "";
+  if (!clientId) {
+    elements.tablaResumenAnualAjustes.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Seleccione un cliente.</td></tr>`;
+    return;
+  }
+
+  const periods = getPeriodsForClient(clientId);
+  if (!periods.length) {
+    elements.tablaResumenAnualAjustes.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Sin períodos.</td></tr>`;
+    return;
+  }
+
+  const sorted = [...periods].sort((a, b) => Number(a.mes) - Number(b.mes));
+
+  let totCount = 0;
+  let totDep = 0;
+  let totProv = 0;
+  let totOtros = 0;
+  let totGeneral = 0;
+
+  const filas = sorted.map((period) => {
+    const entries = contabilidad.getEntries({
+      clienteId: clientId,
+      periodoId: period.id,
+      tipoAsiento: "ajuste",
+      estado: "vigente"
+    });
+
+    let dep = 0;
+    let prov = 0;
+    let otros = 0;
+
+    entries.forEach((entry) => {
+      const summary = contabilidad.summarizeEntry(entry.id);
+      const monto = summary.debito;
+      const cat = entry.categoriaAjuste || "otro";
+
+      if (cat === "depreciacion" || cat === "amortizacion") {
+        dep += monto;
+      } else if (cat === "provision") {
+        prov += monto;
+      } else {
+        otros += monto;
+      }
+    });
+
+    const count = entries.length;
+    const total = round2(dep + prov + otros);
+
+    totCount += count;
+    totDep += dep;
+    totProv += prov;
+    totOtros += otros;
+    totGeneral += total;
+
+    return `<tr>
+      <td><strong>${utils.escapeHTML(periodLabel(period))}</strong></td>
+      <td class="text-end">${count}</td>
+      <td class="text-end">${utils.formatMoney(dep)}</td>
+      <td class="text-end">${utils.formatMoney(prov)}</td>
+      <td class="text-end">${utils.formatMoney(otros)}</td>
+      <td class="text-end fw-semibold">${utils.formatMoney(total)}</td>
+    </tr>`;
+  });
+
+  const filaTotal = `
+    <tr class="table-light fw-semibold">
+      <td class="text-end">TOTALES ANUALES</td>
+      <td class="text-end">${totCount}</td>
+      <td class="text-end">${utils.formatMoney(totDep)}</td>
+      <td class="text-end">${utils.formatMoney(totProv)}</td>
+      <td class="text-end">${utils.formatMoney(totOtros)}</td>
+      <td class="text-end">${utils.formatMoney(totGeneral)}</td>
+    </tr>`;
+
+  elements.tablaResumenAnualAjustes.innerHTML = filas.join("") + filaTotal;
+}
 
   return {
     init,

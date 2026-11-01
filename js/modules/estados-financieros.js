@@ -1,13 +1,15 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de Estados Financieros simplificados
-   Fase 8.1: cálculo acumulado a la fecha seleccionada
+   Fase 8.2: cálculo acumulado + estructura alineada al Capítulo 5.9
    ------------------------------------------------------------
-   Cambio principal:
-   - El Estado de Resultados ya no usa solo débitos/créditos del periodo.
-   - Usa saldos acumulados de la Balanza ajustada hasta el periodo seleccionado.
-   - Esto permite que, al elegir Diciembre 2026, se vea el ejercicio anual
-     del Capítulo 5 sin modificar el motor contable base.
+   ✅ CORREGIDO:
+   - Gastos desglosados en operativos / depreciación / impuestos.
+   - Estructura: Utilidad bruta → Gastos op. → Utilidad operativa →
+     Depreciación → Utilidad antes de impuestos → IT → Utilidad neta.
+   - Eliminado doble conteo de IT (ya está en cuenta 6.4.01).
+   - Activos no corrientes separados (1.2.01 a 1.2.06).
+   - Nombres de cuentas alineados con config.js y Capítulo 5.7/5.9/5.10.
    ========================================================= */
 
 window.CC_ESTADOS_FINANCIEROS = (function () {
@@ -30,14 +32,28 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
   let currentBalanceSheet = null;
   let currentTaxes = { it: 0, ivaPagar: 0 };
 
-  const incomeExpenseCodes = [
-    "6.1.01",
-    "6.1.02",
-    "6.1.03",
-    "6.1.04",
-    "6.1.05"
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: grupos de cuentas separados
+     --------------------------------------------------------- */
+
+  // Gastos operativos (SÍ van antes de la utilidad operativa)
+  const gastosOperativosCodes = [
+    "6.1.01", // Gastos operativos fijos
+    "6.1.02", // Gastos de venta
+    "6.1.03", // Gastos financieros
+    "6.1.05", // Otros gastos
+    "6.2.01", // Gastos de personal – sueldos
+    "6.2.02", // Gastos de personal – CNS 10%
+    "6.2.03"  // Gastos de personal – provisión BS
   ];
 
+  // Depreciación y amortización (va DESPUÉS de la utilidad operativa)
+  const DEPRECIACION_CODE = "6.1.04";
+
+  // Gastos por impuestos (va al final, antes de la utilidad neta)
+  const GASTOS_IMPUESTOS_CODE = "6.4.01";
+
+  // Activos corrientes
   const activoCorrienteCodes = [
     "1.1.01",
     "1.1.02",
@@ -47,6 +63,17 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     "1.1.06"
   ];
 
+  // ✅ CORREGIDO: activos no corrientes separados + cuentas compensadoras
+  const activoNoCorrienteCodes = [
+    { codigo: "1.2.01", esContra: false }, // Equipo de computación
+    { codigo: "1.2.02", esContra: false }, // Mobiliario y equipo de oficina
+    { codigo: "1.2.03", esContra: false }, // Activo intangible – dominio
+    { codigo: "1.2.04", esContra: true },  // Depreciación acumulada – equipo
+    { codigo: "1.2.05", esContra: true },  // Depreciación acumulada – mobiliario
+    { codigo: "1.2.06", esContra: true }   // Amortización acumulada – dominio
+  ];
+
+  // Pasivos corrientes
   const pasivoCorrienteCodes = [
     "2.1.01",
     "2.1.02",
@@ -81,6 +108,7 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     elements.efBalanceBody = document.getElementById("efBalanceBody");
     elements.efVerification = document.getElementById("efVerification");
     elements.efTaxesInfo = document.getElementById("efTaxesInfo");
+    elements.tablaResumenAnualEEFF = document.getElementById("tablaResumenAnualEEFF"); // ✅ NUEVO
   }
 
   function setAlert(message, type = "info") {
@@ -159,21 +187,28 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
   }
 
   function autoSelectDefault() {
-    const clients = motor.getClientsWithPeriods();
+      const clients = motor.getClientsWithPeriods();
 
-    if (!clients.length) {
-      setAlert("No hay clientes con periodos contables.", "warning");
-      return;
-    }
+      if (!clients.length) {
+        setAlert("No hay clientes con periodos contables.", "warning");
+        return;
+      }
 
-    const first = clients[0];
-    elements.efFiltroCliente.value = first.id;
-    loadPeriods(first.id);
+      // ✅ CORREGIDO: preferir Cuentas Claras (CLI-0004)
+      const preferido = clients.find((c) => c.id === "CLI-0004") || clients[0];
 
-    const periods = motor.getPeriodsForClient(first.id);
-    if (periods.length) {
-      elements.efFiltroPeriodo.value = periods[0].id;
-    }
+      elements.efFiltroCliente.value = preferido.id;
+      loadPeriods(preferido.id);
+
+      const periods = motor.getPeriodsForClient(preferido.id);
+
+      // ✅ CORREGIDO: preferir diciembre
+      const diciembre = periods.find((p) => Number(p.mes) === 12);
+      if (diciembre) {
+        elements.efFiltroPeriodo.value = diciembre.id;
+      } else if (periods.length) {
+        elements.efFiltroPeriodo.value = periods[0].id;
+      }
   }
 
   function prepareContext() {
@@ -247,12 +282,6 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     return round2((Number(row.saldoAcreedor) || 0) - (Number(row.saldoDeudor) || 0));
   }
 
-  /* ---------------------------------------------------------
-     Cálculo acumulado a la fecha.
-     Ya no se usa row.debitos/row.creditos del periodo,
-     sino row.saldoDeudor/row.saldoAcreedor acumulados.
-     --------------------------------------------------------- */
-
   function acumuladoNetDeudor(code) {
     const row = rowByCode(code);
     if (!row) return 0;
@@ -273,6 +302,10 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     );
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: getTaxesInfo solo informativo (no afecta cálculo)
+     Acepta ambos conceptos para compatibilidad.
+     --------------------------------------------------------- */
   function getTaxesInfo() {
     if (!currentCtx || !currentPeriod) {
       return { it: 0, ivaPagar: 0 };
@@ -292,8 +325,10 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
         return motor.periodKey(period) <= currentKey;
       });
 
+    const conceptosValidos = ["ventas_brutas", "ventas_mas_otros_ingresos"];
+
     const it = taxes
-      .filter((t) => t.tipo === "IT" && t.concepto === "ventas_brutas")
+      .filter((t) => t.tipo === "IT" && conceptosValidos.includes(t.concepto))
       .reduce((sum, t) => sum + (Number(t.monto) || 0), 0);
 
     const ivaPagar = taxes
@@ -306,6 +341,9 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     };
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: Estado de Resultados con estructura del Capítulo 5.9
+     --------------------------------------------------------- */
   function computeIncome() {
     const ventas = acumuladoNetAcreedor("4.1.01");
     const otrosIngresos = acumuladoNetAcreedor("4.1.02");
@@ -317,19 +355,28 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
 
     const utilidadBruta = round2(totalIngresos - costoNeto);
 
-    const gastos = incomeExpenseCodes.map((code) => ({
-      codigo: code,
-      nombre: accountName(code),
-      monto: acumuladoNetDeudor(code)
-    }));
+    // Gastos operativos (antes de utilidad operativa)
+    const gastosOperativos = gastosOperativosCodes
+      .map((code) => ({
+        codigo: code,
+        nombre: accountName(code),
+        monto: acumuladoNetDeudor(code)
+      }))
+      .filter((g) => g.monto !== 0 || ["6.1.01", "6.2.01"].includes(g.codigo)); // muestra fijos y sueldos aunque sean 0
 
-    const totalGastos = round2(
-      gastos.reduce((sum, g) => sum + g.monto, 0)
+    const totalGastosOperativos = round2(
+      gastosOperativos.reduce((sum, g) => sum + g.monto, 0)
     );
 
-    const utilidadOperativa = round2(utilidadBruta - totalGastos);
-    const impuestosEstimados = currentTaxes.it;
-    const utilidadNeta = round2(utilidadOperativa - impuestosEstimados);
+    const utilidadOperativa = round2(utilidadBruta - totalGastosOperativos);
+
+    // Depreciación y amortización (después de utilidad operativa)
+    const depreciacion = acumuladoNetDeudor(DEPRECIACION_CODE);
+    const utilidadAntesImpuestos = round2(utilidadOperativa - depreciacion);
+
+    // Gastos por impuestos (IT ya contabilizado en 6.4.01)
+    const gastosImpuestos = acumuladoNetDeudor(GASTOS_IMPUESTOS_CODE);
+    const utilidadNeta = round2(utilidadAntesImpuestos - gastosImpuestos);
 
     return {
       ventas,
@@ -339,15 +386,27 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
       devolucionesCompras,
       costoNeto,
       utilidadBruta,
-      gastos,
-      totalGastos,
+      gastosOperativos,
+      totalGastosOperativos,
       utilidadOperativa,
-      impuestosEstimados,
-      utilidadNeta
+      depreciacion,
+      utilidadAntesImpuestos,
+      gastosImpuestos,
+      utilidadNeta,
+
+      // Alias de compatibilidad con otros módulos que lean estos campos
+      gastos: gastosOperativos,
+      totalGastos: totalGastosOperativos,
+      impuestosEstimados: gastosImpuestos
     };
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: Balance General con activos separados
+     y sin doble conteo de IT en el pasivo.
+     --------------------------------------------------------- */
   function computeBalanceSheet() {
+    // ===== ACTIVO CORRIENTE =====
     const activoCorrienteLines = activoCorrienteCodes.map((code) => ({
       codigo: code,
       nombre: accountName(code),
@@ -358,32 +417,42 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
       activoCorrienteLines.reduce((sum, l) => sum + l.monto, 0)
     );
 
-    const mobiliarioEquipo = accountBalance("1.2.01");
-    const depreciacionAcumulada = accountBalance("1.2.02");
-    const intangibles = accountBalance("1.2.03");
+    // ===== ACTIVO NO CORRIENTE (✅ separado) =====
+    const activoNoCorrienteLines = activoNoCorrienteCodes.map((item) => {
+      const monto = accountBalance(item.codigo);
+      return {
+        codigo: item.codigo,
+        nombre: accountName(item.codigo),
+        monto: item.esContra ? -monto : monto,
+        esContra: item.esContra
+      };
+    });
 
     const totalActivoNoCorriente = round2(
-      mobiliarioEquipo - depreciacionAcumulada + intangibles
+      activoNoCorrienteLines.reduce((sum, l) => sum + l.monto, 0)
     );
 
     const totalActivo = round2(totalActivoCorriente + totalActivoNoCorriente);
 
+    // ===== PASIVO CORRIENTE =====
     const pasivoCorrienteLines = pasivoCorrienteCodes.map((code) => ({
       codigo: code,
       nombre: accountName(code),
       monto: accountBalance(code)
     }));
 
-    const pasivoCorrienteBase = round2(
+    const totalPasivoCorriente = round2(
       pasivoCorrienteLines.reduce((sum, l) => sum + l.monto, 0)
     );
 
-    const pasivoITInformativo = currentTaxes.it;
-    const totalPasivoCorriente = round2(pasivoCorrienteBase + pasivoITInformativo);
+    // ✅ CORREGIDO: NO se suma IT informativo al pasivo (ya está pagado en Diario)
+    const pasivoITInformativo = 0;
 
+    // ===== PASIVO NO CORRIENTE =====
     const prestamosLP = accountBalance("2.2.01");
     const totalPasivo = round2(totalPasivoCorriente + prestamosLP);
 
+    // ===== PATRIMONIO =====
     const capital = accountBalance("3.1.01");
     const resultadosAcumulados = accountBalance("3.1.02");
     const resultadoPeriodo = currentIncome ? currentIncome.utilidadNeta : 0;
@@ -398,16 +467,13 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     return {
       activoCorrienteLines,
       totalActivoCorriente,
-      mobiliarioEquipo,
-      depreciacionAcumulada,
-      intangibles,
+      activoNoCorrienteLines,
       totalActivoNoCorriente,
       totalActivo,
 
       pasivoCorrienteLines,
-      pasivoCorrienteBase,
-      pasivoITInformativo,
       totalPasivoCorriente,
+      pasivoITInformativo,
       prestamosLP,
       totalPasivo,
 
@@ -478,6 +544,9 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     }
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: renderIncome con estructura del Capítulo 5.9
+     --------------------------------------------------------- */
   function renderIncome() {
     if (!elements.efIncomeBody) return;
 
@@ -496,12 +565,12 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     `;
 
     html += statementHeader("Ingresos operativos acumulados");
-    html += statementRow("Ventas", i.ventas);
+    html += statementRow("Ingresos por servicios", i.ventas);
     html += statementRow("Otros ingresos", i.otrosIngresos);
     html += statementRow("Total ingresos", i.totalIngresos, "table-light fw-semibold");
 
     html += statementHeader("Costo de ventas acumulado");
-    html += statementRow("Compras / costo bruto", i.comprasBrutas);
+    html += statementRow("Costo de servicios prestados", i.comprasBrutas);
     html += statementRow("(-) Devoluciones y descuentos sobre compras", -i.devolucionesCompras);
     html += statementRow("Costo neto de ventas", i.costoNeto, "table-light fw-semibold");
 
@@ -509,15 +578,18 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
 
     html += statementHeader("Gastos operativos acumulados");
 
-    i.gastos.forEach((g) => {
+    i.gastosOperativos.forEach((g) => {
       html += statementRow(g.nombre, g.monto);
     });
 
-    html += statementRow("Total gastos operativos", i.totalGastos, "table-light fw-semibold");
+    html += statementRow("Total gastos operativos", i.totalGastosOperativos, "table-light fw-semibold");
     html += statementRow("Utilidad operativa", i.utilidadOperativa, "fw-bold");
 
-    html += statementHeader("Impuestos estimados informativos acumulados");
-    html += statementRow("(-) IT estimado", -i.impuestosEstimados);
+    html += statementRow("(-) Depreciación y amortización", -i.depreciacion);
+    html += statementRow("Utilidad antes de impuestos", i.utilidadAntesImpuestos, "fw-bold");
+
+    html += statementHeader("Gastos por impuestos");
+    html += statementRow("(-) Gastos por impuestos (IT)", -i.gastosImpuestos);
     html += statementRow("Utilidad neta acumulada", i.utilidadNeta, "fw-bold table-success");
 
     html += `
@@ -528,6 +600,9 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     elements.efIncomeBody.innerHTML = html;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: renderBalance con activos separados
+     --------------------------------------------------------- */
   function renderBalance() {
     if (!elements.efBalanceBody) return;
 
@@ -545,35 +620,40 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
         <tbody>
     `;
 
+    // ACTIVO CORRIENTE
     html += statementHeader("Activo corriente");
     b.activoCorrienteLines.forEach((l) => {
       html += statementRow(l.nombre, l.monto);
     });
     html += statementRow("Total activo corriente", b.totalActivoCorriente, "table-light fw-semibold");
 
+    // ACTIVO NO CORRIENTE (separado)
     html += statementHeader("Activo no corriente");
-    html += statementRow("Mobiliario y equipo", b.mobiliarioEquipo);
-    html += statementRow("(-) Depreciación acumulada", -b.depreciacionAcumulada);
-    html += statementRow("Intangibles", b.intangibles);
+    b.activoNoCorrienteLines.forEach((l) => {
+      const label = l.esContra ? `(-) ${l.nombre}` : l.nombre;
+      html += statementRow(label, l.monto);
+    });
     html += statementRow("Total activo no corriente", b.totalActivoNoCorriente, "table-light fw-semibold");
 
     html += statementRow("TOTAL ACTIVO", b.totalActivo, "fw-bold table-primary text-white");
 
+    // PASIVO CORRIENTE
     html += statementHeader("Pasivo corriente");
     b.pasivoCorrienteLines.forEach((l) => {
       html += statementRow(l.nombre, l.monto);
     });
-    html += statementRow("Impuestos estimados por pagar (IT informativo)", b.pasivoITInformativo);
     html += statementRow("Total pasivo corriente", b.totalPasivoCorriente, "table-light fw-semibold");
 
+    // PASIVO NO CORRIENTE
     html += statementHeader("Pasivo no corriente");
     html += statementRow("Préstamos a largo plazo", b.prestamosLP);
     html += statementRow("Total pasivo", b.totalPasivo, "table-light fw-semibold");
 
+    // PATRIMONIO
     html += statementHeader("Patrimonio");
-    html += statementRow("Capital / Aportes del propietario", b.capital);
-    html += statementRow("Resultados acumulados", b.resultadosAcumulados);
-    html += statementRow("Resultado acumulado del periodo", b.resultadoPeriodo);
+    html += statementRow("Capital social", b.capital);
+    html += statementRow("Resultado de arranque (gastos de constitución)", b.resultadosAcumulados);
+    html += statementRow("Resultado del ejercicio", b.resultadoPeriodo);
     html += statementRow("Total patrimonio", b.totalPatrimonio, "table-light fw-semibold");
 
     html += statementRow("TOTAL PASIVO Y PATRIMONIO", b.totalPasivoPatrimonio, "fw-bold table-success");
@@ -645,6 +725,9 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     `;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: renderTaxesInfo aclarando que es informativo
+     --------------------------------------------------------- */
   function renderTaxesInfo() {
     if (!elements.efTaxesInfo) return;
 
@@ -659,10 +742,11 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
       <div class="row g-3">
         <div class="col-12 col-md-4">
           <div class="border rounded p-3 h-100">
-            <p class="small text-muted mb-1">IT estimado acumulado</p>
+            <p class="small text-muted mb-1">IT estimado acumulado (informativo)</p>
             <strong class="fs-5 text-warning">${utils.escapeHTML(money(currentTaxes.it))}</strong>
             <small class="d-block text-muted mt-1">
-              Se presenta como gasto informativo y pasivo informativo para cuadrar el balance simplificado.
+              Ya está contabilizado en la cuenta <strong>6.4.01 Gastos por impuestos (IT)</strong>
+              y pagado en caja. No se vuelve a restar en el Estado de Resultados.
             </small>
           </div>
         </div>
@@ -714,6 +798,7 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
     renderBalance();
     renderVerification();
     renderTaxesInfo();
+    renderResumenAnualEEFF(); // ✅ NUEVO
   }
 
   function getCurrentUserId() {
@@ -874,6 +959,110 @@ window.CC_ESTADOS_FINANCIEROS = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+ /* ---------------------------------------------------------
+   ✅ NUEVO: Resumen anual de EE.FF. (12 meses)
+   Muestra utilidad neta, activo, pasivo y patrimonio de
+   cada mes (acumulados a la fecha), con verificación de
+   cuadre del balance.
+   --------------------------------------------------------- */
+function renderResumenAnualEEFF() {
+  if (!elements.tablaResumenAnualEEFF) return;
+
+  const clientId = elements.efFiltroCliente?.value || "";
+  if (!clientId) {
+    elements.tablaResumenAnualEEFF.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Seleccione un cliente.</td></tr>`;
+    return;
+  }
+
+  const periods = motor.getPeriodsForClient(clientId);
+  if (!periods.length) {
+    elements.tablaResumenAnualEEFF.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Sin períodos.</td></tr>`;
+    return;
+  }
+
+  const sorted = [...periods].sort((a, b) => Number(a.mes) - Number(b.mes));
+  const ctx = motor.buildContext(clientId);
+  const map = motor.getAccountsMap();
+
+  const filas = sorted.map((period) => {
+    const key = motor.periodKey(period);
+    const b = motor.getTrialBalance(ctx, map, key, {
+      includeAdjustments: true,
+      includeClosing: false
+    });
+
+    function bal(code) {
+      const row = b.rows.find(r => r.codigo === code);
+      if (!row) return 0;
+      if (row.naturaleza === "deudora") {
+        return round2((row.saldoDeudor || 0) - (row.saldoAcreedor || 0));
+      }
+      return round2((row.saldoAcreedor || 0) - (row.saldoDeudor || 0));
+    }
+
+    function netDeudor(code) {
+      const row = b.rows.find(r => r.codigo === code);
+      if (!row) return 0;
+      return round2((row.saldoDeudor || 0) - (row.saldoAcreedor || 0));
+    }
+
+    function netAcreedor(code) {
+      const row = b.rows.find(r => r.codigo === code);
+      if (!row) return 0;
+      return round2((row.saldoAcreedor || 0) - (row.saldoDeudor || 0));
+    }
+
+    // Estado de Resultados (acumulado a la fecha)
+    const ingresos = netAcreedor("4.1.01") + netAcreedor("4.1.02");
+    const costos = netDeudor("5.1.01");
+    const gastosOp = netDeudor("6.1.01") + netDeudor("6.1.02") + netDeudor("6.1.03") + netDeudor("6.1.05") +
+                     netDeudor("6.2.01") + netDeudor("6.2.02") + netDeudor("6.2.03");
+    const dep = netDeudor("6.1.04");
+    const imp = netDeudor("6.4.01");
+    const utilidadNeta = round2(ingresos - costos - gastosOp - dep - imp);
+
+    // Balance General (acumulado a la fecha)
+    const activoCorr = bal("1.1.01") + bal("1.1.02") + bal("1.1.03") + bal("1.1.04") + bal("1.1.05") + bal("1.1.06");
+    const equipo = bal("1.2.01");
+    const mobiliario = bal("1.2.02");
+    const intangible = bal("1.2.03");
+    const depEquipo = bal("1.2.04");
+    const depMob = bal("1.2.05");
+    const amortDom = bal("1.2.06");
+    const activoNoCorr = round2(equipo + mobiliario + intangible - depEquipo - depMob - amortDom);
+    const totalActivo = round2(activoCorr + activoNoCorr);
+
+    const totalPasivo = round2(
+      bal("2.1.01") + bal("2.1.02") + bal("2.1.03") + bal("2.1.04") + bal("2.1.05") + bal("2.2.01")
+    );
+
+    const capital = bal("3.1.01");
+    const resultadoArranque = bal("3.1.02");
+    const totalPatrimonio = round2(capital + resultadoArranque + utilidadNeta);
+    const totalPasivoPatrimonio = round2(totalPasivo + totalPatrimonio);
+
+    const diff = round2(totalActivo - totalPasivoPatrimonio);
+    const cuadra = Math.abs(diff) <= 0.01;
+
+    const claseUtilidad = utilidadNeta >= 0 ? "text-success" : "text-danger";
+
+    return `<tr>
+      <td><strong>${utils.escapeHTML(motor.periodLabel(period))}</strong></td>
+      <td class="text-end ${claseUtilidad} fw-semibold">${utils.formatMoney(utilidadNeta)}</td>
+      <td class="text-end">${utils.formatMoney(totalActivo)}</td>
+      <td class="text-end">${utils.formatMoney(totalPasivo)}</td>
+      <td class="text-end">${utils.formatMoney(totalPatrimonio)}</td>
+      <td>${cuadra
+        ? '<span class="badge cc-status-activo">Cuadrado</span>'
+        : '<span class="badge cc-status-vencida">Descuadrado</span>'}</td>
+    </tr>`;
+  });
+
+  elements.tablaResumenAnualEEFF.innerHTML = filas.join("");
+}
 
   return {
     init,

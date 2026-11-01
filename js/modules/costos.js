@@ -1,26 +1,46 @@
 /* =========================================================
    Cuentas Claras MVP
    Motor de costos, rentabilidad e indicadores
-   Fase 9.1: cálculo acumulado a la fecha seleccionada
+   Fase 9.2: alineado con Capítulo 5.9, sin doble conteo de IT
    ------------------------------------------------------------
-   Cambio principal:
-   - Income Statement usa saldos acumulados de la Balanza ajustada.
-   - Impuestos informativos se acumulan hasta el periodo seleccionado.
-   - Esto permite que Diciembre 2026 muestre el ejercicio anual
-     del Capítulo 5, y otros meses muestren acumulado parcial.
+   ✅ CORREGIDO:
+   - computeIncome() ahora respeta la estructura del Capítulo 5.9:
+     Utilidad bruta → Gastos operativos → Utilidad operativa →
+     Depreciación → Utilidad antes de impuestos → IT → Utilidad neta.
+   - Gastos desglosados en: operativos (6.1.01/02/03/05, 6.2.01/02/03),
+     depreciación (6.1.04) y gastos por impuestos (6.4.01).
+   - Eliminado el doble conteo de IT (ya está en 6.4.01, no se resta
+     taxes.it de nuevo).
+   - computeBalanceSheet() con activos no corrientes separados
+     (1.2.01 a 1.2.06) y sin pasivoITInformativo falso.
+   - getTaxes() acepta ambos conceptos de IT.
+   - cmRatio ya no se redondea a 2 decimales (mejora precisión del PE).
+   - Se agregan campos porcentuales (ventasPct, otrosPct, etc.) para
+     que el renderer muestre correctamente la columna "% sobre ingresos".
    ========================================================= */
 
 window.CC_COSTOS = (function () {
   const motor = window.CC_MAYOR_BALANZA;
   const storage = window.CC_STORAGE;
 
-  const EXPENSE_CODES = [
-    "6.1.01",
-    "6.1.02",
-    "6.1.03",
-    "6.1.04",
-    "6.1.05"
+  /* ✅ CORREGIDO: grupos de cuentas separados */
+
+  // Gastos operativos (SÍ van antes de la utilidad operativa)
+  const GASTOS_OPERATIVOS_CODES = [
+    "6.1.01", // Gastos operativos fijos
+    "6.1.02", // Gastos de venta
+    "6.1.03", // Gastos financieros
+    "6.1.05", // Otros gastos
+    "6.2.01", // Gastos de personal – sueldos
+    "6.2.02", // Gastos de personal – CNS 10%
+    "6.2.03"  // Gastos de personal – provisión BS
   ];
+
+  // Depreciación (DESPUÉS de la utilidad operativa)
+  const DEPRECIACION_CODE = "6.1.04";
+
+  // Gastos por impuestos (al final, antes de la utilidad neta)
+  const GASTOS_IMPUESTOS_CODE = "6.4.01";
 
   const CURRENT_ASSET_CODES = [
     "1.1.01",
@@ -31,6 +51,16 @@ window.CC_COSTOS = (function () {
     "1.1.06"
   ];
 
+  /* ✅ CORREGIDO: activos no corrientes separados */
+  const NON_CURRENT_ASSET_CODES = [
+    { codigo: "1.2.01", esContra: false }, // Equipo de computación
+    { codigo: "1.2.02", esContra: false }, // Mobiliario y equipo de oficina
+    { codigo: "1.2.03", esContra: false }, // Activo intangible – dominio
+    { codigo: "1.2.04", esContra: true },  // Depreciación acumulada – equipo
+    { codigo: "1.2.05", esContra: true },  // Depreciación acumulada – mobiliario
+    { codigo: "1.2.06", esContra: true }   // Amortización acumulada – dominio
+  ];
+
   const CURRENT_LIABILITY_CODES = [
     "2.1.01",
     "2.1.02",
@@ -38,6 +68,9 @@ window.CC_COSTOS = (function () {
     "2.1.04",
     "2.1.05"
   ];
+
+  // Conceptos válidos de IT (acepta ambos)
+  const IT_CONCEPTOS = ["ventas_brutas", "ventas_mas_otros_ingresos"];
 
   function round2(value) {
     return motor && motor.round2
@@ -53,37 +86,30 @@ window.CC_COSTOS = (function () {
   function percent(value, base) {
     const v = safeNumber(value);
     const b = safeNumber(base);
-
     if (Math.abs(b) <= 0.01) return null;
-
     return round2((v / b) * 100);
   }
 
   function ratio(value, base) {
     const v = safeNumber(value);
     const b = safeNumber(base);
-
     if (Math.abs(b) <= 0.01) return null;
-
     return round2(v / b);
   }
 
   function makeRowLookup(balances) {
     const map = {};
-
     (balances?.rows || []).forEach((row) => {
       map[row.codigo] = row;
     });
-
     return function rowByCode(code) {
       return map[code] || null;
     };
   }
 
   /* ---------------------------------------------------------
-     Impuestos acumulados hasta el periodo seleccionado.
+     ✅ CORREGIDO: getTaxes acepta ambos conceptos de IT
      --------------------------------------------------------- */
-
   function getTaxes(clientId, ctx, currentKey) {
     const taxes = storage
       .list("taxes")
@@ -91,14 +117,12 @@ window.CC_COSTOS = (function () {
 
     const included = taxes.filter((t) => {
       const period = ctx?.periodMap?.[t.periodoId];
-
       if (!period) return false;
-
       return motor.periodKey(period) <= currentKey;
     });
 
     const it = included
-      .filter((t) => t.tipo === "IT" && t.concepto === "ventas_brutas")
+      .filter((t) => t.tipo === "IT" && IT_CONCEPTOS.includes(t.concepto))
       .reduce((sum, t) => sum + safeNumber(t.monto), 0);
 
     const ivaPagar = included
@@ -112,30 +136,22 @@ window.CC_COSTOS = (function () {
   }
 
   /* ---------------------------------------------------------
-     Estado de resultados acumulado a la fecha.
+     ✅ CORREGIDO: Estado de Resultados alineado al Capítulo 5.9
+     NO se resta taxes.it (ya está en 6.4.01)
      --------------------------------------------------------- */
-
   function computeIncome(balances, taxes) {
     const rowByCode = makeRowLookup(balances);
 
     function acumuladoNetDeudor(code) {
       const row = rowByCode(code);
       if (!row) return 0;
-
-      return round2(
-        safeNumber(row.saldoDeudor) -
-        safeNumber(row.saldoAcreedor)
-      );
+      return round2(safeNumber(row.saldoDeudor) - safeNumber(row.saldoAcreedor));
     }
 
     function acumuladoNetAcreedor(code) {
       const row = rowByCode(code);
       if (!row) return 0;
-
-      return round2(
-        safeNumber(row.saldoAcreedor) -
-        safeNumber(row.saldoDeudor)
-      );
+      return round2(safeNumber(row.saldoAcreedor) - safeNumber(row.saldoDeudor));
     }
 
     function accountName(code) {
@@ -153,47 +169,90 @@ window.CC_COSTOS = (function () {
 
     const utilidadBruta = round2(totalIngresos - costoNeto);
 
-    const gastos = EXPENSE_CODES.map((code) => ({
+    // Gastos operativos (antes de utilidad operativa)
+    const gastosOperativos = GASTOS_OPERATIVOS_CODES.map((code) => ({
       codigo: code,
       nombre: accountName(code),
       monto: acumuladoNetDeudor(code)
-    }));
+    })).filter((g) => g.monto !== 0 || ["6.1.01", "6.2.01"].includes(g.codigo));
 
-    const totalGastos = round2(
-      gastos.reduce((sum, g) => sum + g.monto, 0)
+    const totalGastosOperativos = round2(
+      gastosOperativos.reduce((sum, g) => sum + g.monto, 0)
     );
 
-    const utilidadOperativa = round2(utilidadBruta - totalGastos);
-    const impuestosEstimados = safeNumber(taxes.it);
-    const utilidadNeta = round2(utilidadOperativa - impuestosEstimados);
+    const utilidadOperativa = round2(utilidadBruta - totalGastosOperativos);
 
+    // Depreciación (después de utilidad operativa)
+    const depreciacion = acumuladoNetDeudor(DEPRECIACION_CODE);
+    const utilidadAntesImpuestos = round2(utilidadOperativa - depreciacion);
+
+    // Gastos por impuestos (IT ya contabilizado en 6.4.01)
+    const gastosImpuestos = acumuladoNetDeudor(GASTOS_IMPUESTOS_CODE);
+    const utilidadNeta = round2(utilidadAntesImpuestos - gastosImpuestos);
+
+    // ✅ Campos porcentuales para que el renderer muestre correctamente
+    // la columna "% sobre ingresos"
     return {
       ventas,
+      ventasPct: percent(ventas, totalIngresos),
+
       otrosIngresos,
+      otrosIngresosPct: percent(otrosIngresos, totalIngresos),
+
       totalIngresos,
+      totalIngresosPct: 100,
+
       comprasBrutas,
+      comprasBrutasPct: percent(comprasBrutas, totalIngresos),
+
       devolucionesCompras,
+      devolucionesComprasPct: percent(devolucionesCompras, totalIngresos),
+
       costoNeto,
+      costoNetoPct: percent(costoNeto, totalIngresos),
+
       utilidadBruta,
-      gastos,
-      totalGastos,
+      utilidadBrutaPct: percent(utilidadBruta, totalIngresos),
+
+      gastosOperativos,
+      totalGastosOperativos,
+      totalGastosOperativosPct: percent(totalGastosOperativos, totalIngresos),
+
       utilidadOperativa,
-      impuestosEstimados,
-      utilidadNeta
+      utilidadOperativaPct: percent(utilidadOperativa, totalIngresos),
+
+      depreciacion,
+      depreciacionPct: percent(depreciacion, totalIngresos),
+
+      utilidadAntesImpuestos,
+      utilidadAntesImpuestosPct: percent(utilidadAntesImpuestos, totalIngresos),
+
+      gastosImpuestos,
+      gastosImpuestosPct: percent(gastosImpuestos, totalIngresos),
+
+      utilidadNeta,
+      utilidadNetaPct: percent(utilidadNeta, totalIngresos),
+
+      // Alias de compatibilidad
+      gastos: gastosOperativos,
+      totalGastos: totalGastosOperativos,
+      impuestosEstimados: gastosImpuestos
     };
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: Balance con activos separados
+     Sin pasivoITInformativo falso (el IT ya se pagó en caja)
+     --------------------------------------------------------- */
   function computeBalanceSheet(balances, income, taxes) {
     const rowByCode = makeRowLookup(balances);
 
     function accountBalance(code) {
       const row = rowByCode(code);
       if (!row) return 0;
-
       if (row.naturaleza === "deudora") {
         return round2(safeNumber(row.saldoDeudor) - safeNumber(row.saldoAcreedor));
       }
-
       return round2(safeNumber(row.saldoAcreedor) - safeNumber(row.saldoDeudor));
     }
 
@@ -202,6 +261,7 @@ window.CC_COSTOS = (function () {
       return row ? row.nombre : code;
     }
 
+    // ACTIVO CORRIENTE
     const activoCorrienteLines = CURRENT_ASSET_CODES.map((code) => ({
       codigo: code,
       nombre: accountName(code),
@@ -212,32 +272,42 @@ window.CC_COSTOS = (function () {
       activoCorrienteLines.reduce((sum, l) => sum + l.monto, 0)
     );
 
-    const mobiliarioEquipo = accountBalance("1.2.01");
-    const depreciacionAcumulada = accountBalance("1.2.02");
-    const intangibles = accountBalance("1.2.03");
+    // ACTIVO NO CORRIENTE (separado)
+    const activoNoCorrienteLines = NON_CURRENT_ASSET_CODES.map((item) => {
+      const monto = accountBalance(item.codigo);
+      return {
+        codigo: item.codigo,
+        nombre: accountName(item.codigo),
+        monto: item.esContra ? -monto : monto,
+        esContra: item.esContra
+      };
+    });
 
     const totalActivoNoCorriente = round2(
-      mobiliarioEquipo - depreciacionAcumulada + intangibles
+      activoNoCorrienteLines.reduce((sum, l) => sum + l.monto, 0)
     );
 
     const totalActivo = round2(totalActivoCorriente + totalActivoNoCorriente);
 
+    // PASIVO CORRIENTE
     const pasivoCorrienteLines = CURRENT_LIABILITY_CODES.map((code) => ({
       codigo: code,
       nombre: accountName(code),
       monto: accountBalance(code)
     }));
 
-    const pasivoCorrienteBase = round2(
+    const totalPasivoCorriente = round2(
       pasivoCorrienteLines.reduce((sum, l) => sum + l.monto, 0)
     );
 
-    const pasivoITInformativo = safeNumber(taxes.it);
-    const totalPasivoCorriente = round2(pasivoCorrienteBase + pasivoITInformativo);
+    // ✅ CORREGIDO: NO se suma IT al pasivo (ya se pagó en caja)
+    const pasivoITInformativo = 0;
 
+    // PASIVO NO CORRIENTE
     const prestamosLP = accountBalance("2.2.01");
     const totalPasivo = round2(totalPasivoCorriente + prestamosLP);
 
+    // PATRIMONIO
     const capital = accountBalance("3.1.01");
     const resultadosAcumulados = accountBalance("3.1.02");
     const resultadoPeriodo = income.utilidadNeta;
@@ -252,14 +322,12 @@ window.CC_COSTOS = (function () {
     return {
       activoCorrienteLines,
       totalActivoCorriente,
-      mobiliarioEquipo,
-      depreciacionAcumulada,
-      intangibles,
+      activoNoCorrienteLines,
       totalActivoNoCorriente,
       totalActivo,
 
       pasivoCorrienteLines,
-      pasivoCorrienteBase,
+      pasivoCorrienteBase: totalPasivoCorriente,
       pasivoITInformativo,
       totalPasivoCorriente,
       prestamosLP,
@@ -283,9 +351,11 @@ window.CC_COSTOS = (function () {
 
     const costoVariable = income.costoNeto;
     const margenContribucion = round2(income.totalIngresos - costoVariable);
+
+    // ✅ CORREGIDO: ratio sin redondear (mayor precisión en PE)
     const ratioMargenContribucion =
       income.totalIngresos > 0
-        ? round2(margenContribucion / income.totalIngresos)
+        ? margenContribucion / income.totalIngresos
         : null;
 
     return {
@@ -303,7 +373,8 @@ window.CC_COSTOS = (function () {
     const totalIngresos = safeNumber(income.totalIngresos);
     const cmRatio = costMetrics.ratioMargenContribucion;
 
-    const costosFijosContables = safeNumber(income.totalGastos);
+    // ✅ CORREGIDO: costos fijos = solo gastos operativos (sin depreciación ni IT)
+    const costosFijosContables = safeNumber(income.totalGastosOperativos);
     const costosFijosEstimados = safeNumber(client?.costosFijosMensuales);
 
     function calcPE(fijos) {

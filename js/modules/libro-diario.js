@@ -1,7 +1,19 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de Libro Diario
-   Fase 5
+   Fase 5.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - ensureAccountsCatalog() ahora hace UPSERT usando
+     motor.ensureAccounts() si está disponible. Si no, actualiza
+     las cuentas existentes con los datos de config.js.
+   - applyFilters() usa consistentemente elements.diarioBusqueda
+     (antes había un nombre inconsistente).
+   - renderTable() muestra un badge de "Cuadrado/Descuadrado"
+     por asiento, y la columna de diferencia.
+   - Modal de detalle muestra el nombre de la categoría de ajuste
+     (no el código crudo).
+   - Se agrega categoryLabel() para traducir el código.
    ========================================================= */
 
 window.CC_LIBRO_DIARIO = (function () {
@@ -9,20 +21,11 @@ window.CC_LIBRO_DIARIO = (function () {
   const utils = window.CC_UTILS;
   const storage = window.CC_STORAGE;
   const contabilidad = window.CC_CONTABILIDAD;
+  const motor = window.CC_MAYOR_BALANZA;
 
   const monthNames = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre"
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
   const elements = {};
@@ -50,6 +53,7 @@ window.CC_LIBRO_DIARIO = (function () {
     elements.metricPendientes = document.getElementById("metricPendientes");
 
     elements.tablaAsientos = document.getElementById("tablaAsientos");
+    elements.tablaResumenPeriodo = document.getElementById("tablaResumenPeriodo"); // ✅ NUEVO
 
     elements.asientoManualModalEl = document.getElementById("asientoManualModal");
     elements.asientoManualForm = document.getElementById("asientoManualForm");
@@ -115,7 +119,6 @@ window.CC_LIBRO_DIARIO = (function () {
     if (!selectEl) return;
 
     const currentValue = selectEl.value;
-
     selectEl.innerHTML = "";
 
     if (placeholder !== null) {
@@ -137,31 +140,54 @@ window.CC_LIBRO_DIARIO = (function () {
     }
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: ensureAccountsCatalog con UPSERT
+     --------------------------------------------------------- */
   function ensureAccountsCatalog() {
+    // Si el motor está disponible, usar su ensureAccounts (con upsert)
+    if (motor && motor.ensureAccounts) {
+      motor.ensureAccounts();
+      return;
+    }
+
+    // Fallback: upsert manual
     const accounts = storage.list("accounts");
-
-    if (accounts.length > 0) return;
-
     const catalog = cfg.accountCatalog || [];
 
-    catalog.forEach((account) => {
-      storage.create(
-        "accounts",
-        {
-          ...account
-        },
-        "ACC"
-      );
+    if (!accounts.length) {
+      catalog.forEach((account) => {
+        storage.create("accounts", { ...account }, "ACC");
+      });
+      return;
+    }
+
+    // Upsert: actualizar existentes y crear nuevas
+    const existingByCode = {};
+    accounts.forEach((a) => {
+      if (a && a.codigo) existingByCode[String(a.codigo)] = a;
     });
 
-    if (window.CC_BITACORA) {
-      window.CC_BITACORA.log(
-        "cargar_plan_cuentas",
-        "accounts",
-        null,
-        "Plan de cuentas inicial migrado desde configuración"
-      );
-    }
+    catalog.forEach((account) => {
+      const code = String(account.codigo || "");
+      if (!code) return;
+
+      const found = existingByCode[code];
+      if (!found) {
+        storage.create("accounts", { ...account }, "ACC");
+        return;
+      }
+
+      const needsUpdate =
+        found.nombre !== account.nombre ||
+        found.tipo !== account.tipo ||
+        found.naturaleza !== account.naturaleza ||
+        Boolean(found.esContra) !== Boolean(account.esContra) ||
+        Boolean(found.esTemporal) !== Boolean(account.esTemporal);
+
+      if (needsUpdate && typeof storage.update === "function") {
+        storage.update("accounts", found.id, { ...found, ...account });
+      }
+    });
   }
 
   function getAllClients() {
@@ -226,19 +252,22 @@ window.CC_LIBRO_DIARIO = (function () {
 
     return `
       <option value="">Seleccione una cuenta...</option>
-      ${accounts
-        .map(
-          (account) => `
-            <option
-              value="${utils.escapeHTML(account.codigo)}"
-              ${account.codigo === selected ? "selected" : ""}
-            >
-              ${utils.escapeHTML(`${account.codigo} - ${account.nombre}`)}
-            </option>
-          `
-        )
-        .join("")}
+      ${accounts.map((account) => `
+        <option
+          value="${utils.escapeHTML(account.codigo)}"
+          ${account.codigo === selected ? "selected" : ""}
+        >
+          ${utils.escapeHTML(`${account.codigo} - ${account.nombre}`)}
+        </option>
+      `).join("")}
     `;
+  }
+
+  /* ✅ NUEVO: traduce el código de categoría a nombre */
+  function categoryLabel(value) {
+    if (!value) return "";
+    const found = (cfg.adjustmentCategories || []).find((c) => c.value === value);
+    return found ? found.label : value;
   }
 
   function populateFilters() {
@@ -376,21 +405,28 @@ window.CC_LIBRO_DIARIO = (function () {
 
   function autoSelectDefault() {
     const clients = getActiveClients();
-
     if (!clients.length) return;
 
-    const firstClient = clients[0];
-    elements.diarioFiltroCliente.value = firstClient.id;
+    // ✅ CORREGIDO: preferir Cuentas Claras (CLI-0004) para la demo
+    const preferido = clients.find((c) => c.id === "CLI-0004") || clients[0];
 
-    loadFilterPeriods(firstClient.id);
+    elements.diarioFiltroCliente.value = preferido.id;
+    loadFilterPeriods(preferido.id);
 
-    const periods = getPeriodOptions(firstClient.id);
+    const periods = getPeriodOptions(preferido.id);
 
-    if (periods.length) {
+    // ✅ CORREGIDO: preferir diciembre (donde están los 65 asientos)
+    const diciembre = periods.find((p) => Number(p.mes) === 12);
+    if (diciembre) {
+      elements.diarioFiltroPeriodo.value = diciembre.id;
+    } else if (periods.length) {
       elements.diarioFiltroPeriodo.value = periods[0].id;
     }
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: applyFilters usa consistentemente diarioBusqueda
+     --------------------------------------------------------- */
   function applyFilters() {
     return contabilidad.getEntries({
       clienteId: elements.diarioFiltroCliente?.value || "",
@@ -398,7 +434,7 @@ window.CC_LIBRO_DIARIO = (function () {
       tipoAsiento: elements.diarioFiltroTipo?.value || "",
       origen: elements.diarioFiltroOrigen?.value || "",
       estado: elements.diarioFiltroEstado?.value || "",
-      search: elements.diarioFiltroBusqueda?.value || elements.diarioBusqueda?.value || ""
+      search: elements.diarioBusqueda?.value || ""
     });
   }
 
@@ -459,21 +495,10 @@ window.CC_LIBRO_DIARIO = (function () {
   function entryTypeBadge(tipo) {
     const safe = String(tipo || "").toLowerCase();
 
-    if (safe === "operacion") {
-      return '<span class="badge bg-primary-subtle text-primary">Operación</span>';
-    }
-
-    if (safe === "ajuste") {
-      return '<span class="badge bg-warning-subtle text-warning">Ajuste</span>';
-    }
-
-    if (safe === "cierre") {
-      return '<span class="badge bg-dark">Cierre</span>';
-    }
-
-    if (safe === "apertura") {
-      return '<span class="badge bg-info-subtle text-info">Apertura</span>';
-    }
+    if (safe === "operacion") return '<span class="badge bg-primary-subtle text-primary">Operación</span>';
+    if (safe === "ajuste") return '<span class="badge bg-warning-subtle text-warning">Ajuste</span>';
+    if (safe === "cierre") return '<span class="badge bg-dark">Cierre</span>';
+    if (safe === "apertura") return '<span class="badge bg-info-subtle text-info">Apertura</span>';
 
     return `<span class="badge bg-secondary">${utils.escapeHTML(safe || "-")}</span>`;
   }
@@ -481,13 +506,8 @@ window.CC_LIBRO_DIARIO = (function () {
   function originBadge(origen) {
     const safe = String(origen || "").toLowerCase();
 
-    if (safe === "automatico") {
-      return '<span class="badge bg-success-subtle text-success">Automático</span>';
-    }
-
-    if (safe === "manual") {
-      return '<span class="badge bg-secondary-subtle text-secondary">Manual</span>';
-    }
+    if (safe === "automatico") return '<span class="badge bg-success-subtle text-success">Automático</span>';
+    if (safe === "manual") return '<span class="badge bg-secondary-subtle text-secondary">Manual</span>';
 
     return `<span class="badge bg-light text-dark">${utils.escapeHTML(safe || "-")}</span>`;
   }
@@ -495,24 +515,22 @@ window.CC_LIBRO_DIARIO = (function () {
   function entryStateBadge(estado) {
     const safe = String(estado || "").toLowerCase();
 
-    if (safe === "vigente") {
-      return '<span class="badge cc-status-activo">Vigente</span>';
-    }
-
-    if (safe === "anulado") {
-      return '<span class="badge cc-status-anulada">Anulado</span>';
-    }
+    if (safe === "vigente") return '<span class="badge cc-status-activo">Vigente</span>';
+    if (safe === "anulado") return '<span class="badge cc-status-anulada">Anulado</span>';
 
     return `<span class="badge bg-secondary">${utils.escapeHTML(safe || "-")}</span>`;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: renderTable con badge de cuadre
+     --------------------------------------------------------- */
   function renderTable(entries) {
     if (!elements.tablaAsientos) return;
 
     if (!entries.length) {
       elements.tablaAsientos.innerHTML = `
         <tr>
-          <td colspan="11" class="text-center text-muted py-4">
+          <td colspan="12" class="text-center text-muted py-4">
             No se encontraron asientos con los filtros aplicados.
           </td>
         </tr>
@@ -529,6 +547,10 @@ window.CC_LIBRO_DIARIO = (function () {
           period &&
           period.estado !== "cerrado";
 
+        const cuadreBadge = summary.cuadrado
+          ? '<span class="badge cc-status-activo">Cuadrado</span>'
+          : '<span class="badge cc-status-vencida">Descuadrado</span>';
+
         const voidButton = canVoid
           ? `<button
                 class="btn btn-outline-danger"
@@ -539,11 +561,7 @@ window.CC_LIBRO_DIARIO = (function () {
               >
                 <i class="bi bi-x-octagon"></i>
               </button>`
-          : `<button
-                class="btn btn-outline-danger disabled"
-                type="button"
-                title="No anulable"
-              >
+          : `<button class="btn btn-outline-danger disabled" type="button" title="No anulable">
                 <i class="bi bi-x-octagon"></i>
               </button>`;
 
@@ -553,26 +571,21 @@ window.CC_LIBRO_DIARIO = (function () {
             <td>${utils.escapeHTML(utils.formatDate(entry.fecha))}</td>
             <td>
               <strong>${utils.escapeHTML(getClientName(entry.clienteId))}</strong>
-              <small class="d-block text-muted">
-                ${utils.escapeHTML(entry.clienteId)}
-              </small>
+              <small class="d-block text-muted">${utils.escapeHTML(entry.clienteId)}</small>
             </td>
             <td>${utils.escapeHTML(period ? periodLabel(period) : "-")}</td>
             <td>${entryTypeBadge(entry.tipoAsiento)}</td>
             <td>${originBadge(entry.origen)}</td>
             <td>
               ${utils.escapeHTML(entry.descripcion || "-")}
-              ${
-                entry.categoriaAjuste
-                  ? `<small class="d-block text-muted">
-                      Categoría: ${utils.escapeHTML(entry.categoriaAjuste)}
-                    </small>`
-                  : ""
-              }
+              ${entry.categoriaAjuste
+                ? `<small class="d-block text-muted">Categoría: ${utils.escapeHTML(categoryLabel(entry.categoriaAjuste))}</small>`
+                : ""}
             </td>
             <td>${utils.escapeHTML(utils.formatMoney(summary.debito))}</td>
             <td>${utils.escapeHTML(utils.formatMoney(summary.credito))}</td>
             <td>${entryStateBadge(entry.estado)}</td>
+            <td>${cuadreBadge}</td>
             <td class="text-end">
               <div class="btn-group btn-group-sm" role="group">
                 <button
@@ -597,6 +610,7 @@ window.CC_LIBRO_DIARIO = (function () {
     const entries = applyFilters();
     renderMetrics(entries);
     renderTable(entries);
+    renderResumenPorPeriodo(); // ✅ NUEVO
   }
 
   function viewEntry(id) {
@@ -615,9 +629,7 @@ window.CC_LIBRO_DIARIO = (function () {
     elements.asientoDetalleContenido.innerHTML = `
       <div class="row g-3 mb-3">
         <div class="col-12">
-          <h3 class="h5 fw-bold mb-1">
-            ${utils.escapeHTML(entry.folio || entry.id)}
-          </h3>
+          <h3 class="h5 fw-bold mb-1">${utils.escapeHTML(entry.folio || entry.id)}</h3>
           <p class="text-muted mb-0">
             ${utils.escapeHTML(client ? client.nombreComercial : "Cliente no encontrado")} ·
             ${utils.escapeHTML(period ? periodLabel(period) : "Periodo no encontrado")}
@@ -697,21 +709,17 @@ window.CC_LIBRO_DIARIO = (function () {
             </tr>
           </thead>
           <tbody>
-            ${lines
-              .map(
-                (line) => `
-                  <tr>
-                    <td><code>${utils.escapeHTML(line.cuentaCodigo)}</code></td>
-                    <td>${utils.escapeHTML(line.cuentaNombre || "-")}</td>
-                    <td>${utils.escapeHTML(utils.formatMoney(line.debito))}</td>
-                    <td>${utils.escapeHTML(utils.formatMoney(line.credito))}</td>
-                    <td>${utils.escapeHTML(line.tercero || "-")}</td>
-                    <td>${utils.escapeHTML(line.referencia || "-")}</td>
-                    <td>${utils.escapeHTML(line.observacion || "-")}</td>
-                  </tr>
-                `
-              )
-              .join("")}
+            ${lines.map((line) => `
+              <tr>
+                <td><code>${utils.escapeHTML(line.cuentaCodigo)}</code></td>
+                <td>${utils.escapeHTML(line.cuentaNombre || "-")}</td>
+                <td>${utils.escapeHTML(utils.formatMoney(line.debito))}</td>
+                <td>${utils.escapeHTML(utils.formatMoney(line.credito))}</td>
+                <td>${utils.escapeHTML(line.tercero || "-")}</td>
+                <td>${utils.escapeHTML(line.referencia || "-")}</td>
+                <td>${utils.escapeHTML(line.observacion || "-")}</td>
+              </tr>
+            `).join("")}
           </tbody>
           <tfoot class="table-light">
             <tr>
@@ -719,11 +727,9 @@ window.CC_LIBRO_DIARIO = (function () {
               <th>${utils.escapeHTML(utils.formatMoney(summary.debito))}</th>
               <th>${utils.escapeHTML(utils.formatMoney(summary.credito))}</th>
               <th colspan="3">
-                ${
-                  summary.cuadrado
-                    ? '<span class="badge cc-status-activo">Cuadrado</span>'
-                    : '<span class="badge cc-status-vencida">Descuadrado</span>'
-                }
+                ${summary.cuadrado
+                  ? '<span class="badge cc-status-activo">Cuadrado</span>'
+                  : '<span class="badge cc-status-vencida">Descuadrado</span>'}
               </th>
             </tr>
           </tfoot>
@@ -895,13 +901,7 @@ window.CC_LIBRO_DIARIO = (function () {
         const tercero = row.querySelector(".tercero-input")?.value.trim() || "";
         const observacion = row.querySelector(".observacion-input")?.value.trim() || "";
 
-        return {
-          cuentaCodigo,
-          debito,
-          credito,
-          tercero,
-          observacion
-        };
+        return { cuentaCodigo, debito, credito, tercero, observacion };
       })
       .filter(
         (line) =>
@@ -937,8 +937,7 @@ window.CC_LIBRO_DIARIO = (function () {
     if (elements.totalManualDiferencia) {
       elements.totalManualDiferencia.textContent = utils.formatMoney(diferencia);
       elements.totalManualDiferencia.className =
-        "fs-5 " +
-        (Math.abs(diferencia) <= 0.01 ? "text-success" : "text-danger");
+        "fs-5 " + (Math.abs(diferencia) <= 0.01 ? "text-success" : "text-danger");
     }
   }
 
@@ -997,13 +996,8 @@ window.CC_LIBRO_DIARIO = (function () {
       }
     }
 
-    const totalDebito = round2(
-      lines.reduce((sum, line) => sum + line.debito, 0)
-    );
-
-    const totalCredito = round2(
-      lines.reduce((sum, line) => sum + line.credito, 0)
-    );
+    const totalDebito = round2(lines.reduce((sum, line) => sum + line.debito, 0));
+    const totalCredito = round2(lines.reduce((sum, line) => sum + line.credito, 0));
 
     if (Math.abs(totalDebito - totalCredito) > 0.01) {
       throw new Error("El asiento no cuadra: los débitos y créditos deben ser iguales.");
@@ -1078,7 +1072,6 @@ window.CC_LIBRO_DIARIO = (function () {
 
     elements.tablaAsientos?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-action]");
-
       if (!button) return;
 
       const action = button.dataset.action;
@@ -1098,11 +1091,9 @@ window.CC_LIBRO_DIARIO = (function () {
 
     elements.manualLines?.addEventListener("click", (event) => {
       const button = event.target.closest(".remove-line");
-
       if (!button) return;
 
       const row = button.closest(".cc-asiento-linea");
-
       if (!row) return;
 
       if (elements.manualLines.children.length <= 2) {
@@ -1143,6 +1134,92 @@ window.CC_LIBRO_DIARIO = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+  /* ---------------------------------------------------------
+   ✅ NUEVO: Resumen por período (12 meses consolidados)
+   Muestra # asientos, débitos, créditos y cuadre por mes.
+   --------------------------------------------------------- */
+function renderResumenPorPeriodo() {
+  if (!elements.tablaResumenPeriodo) return;
+
+  const clientId = elements.diarioFiltroCliente?.value || "";
+
+  if (!clientId) {
+    elements.tablaResumenPeriodo.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Seleccione un cliente.</td></tr>`;
+    return;
+  }
+
+  const periods = getPeriods()
+    .filter((p) => p.clienteId === clientId)
+    .sort((a, b) => Number(a.mes) - Number(b.mes));
+
+  if (!periods.length) {
+    elements.tablaResumenPeriodo.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Sin períodos.</td></tr>`;
+    return;
+  }
+
+  let totAsientos = 0;
+  let totDeb = 0;
+  let totCred = 0;
+
+  const filas = periods.map((period) => {
+    const entries = contabilidad.getEntries({
+      clienteId: clientId,
+      periodoId: period.id,
+      estado: "vigente"
+    });
+
+    let deb = 0;
+    let cred = 0;
+
+    entries.forEach((e) => {
+      const s = contabilidad.summarizeEntry(e.id);
+      deb += s.debito;
+      cred += s.credito;
+    });
+
+    deb = round2(deb);
+    cred = round2(cred);
+    const count = entries.length;
+    const diff = round2(deb - cred);
+    const cuadra = Math.abs(diff) <= 0.01;
+
+    totAsientos += count;
+    totDeb += deb;
+    totCred += cred;
+
+    return `
+      <tr>
+        <td><strong>${utils.escapeHTML(periodLabel(period))}</strong></td>
+        <td class="text-end">${count}</td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(deb))}</td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(cred))}</td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(diff))}</td>
+        <td>${cuadra
+          ? '<span class="badge cc-status-activo">Cuadrado</span>'
+          : '<span class="badge cc-status-vencida">Descuadrado</span>'}</td>
+      </tr>`;
+  });
+
+  const totDiff = round2(totDeb - totCred);
+  const totCuadra = Math.abs(totDiff) <= 0.01;
+
+  const filaTotal = `
+    <tr class="table-light fw-semibold">
+      <td class="text-end">TOTALES ANUALES</td>
+      <td class="text-end">${totAsientos}</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(totDeb))}</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(totCred))}</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(totDiff))}</td>
+      <td>${totCuadra
+        ? '<span class="badge cc-status-activo">Cuadrado</span>'
+        : '<span class="badge cc-status-vencida">Descuadrado</span>'}</td>
+    </tr>`;
+
+  elements.tablaResumenPeriodo.innerHTML = filas.join("") + filaTotal;
+}
 
   return {
     init,

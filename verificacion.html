@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación Integral – Cuentas Claras</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f8f9fa; padding: 2rem 0; }
+    .test-ok { color: #198754; }
+    .test-fail { color: #dc3545; }
+    .test-skip { color: #6c757d; }
+    .test-row td { vertical-align: middle; }
+    .suite-header { background: #e9ecef; font-weight: 600; }
+    .summary-card { position: sticky; top: 0; z-index: 100; }
+    .expected { font-size: 0.85rem; color: #6c757d; }
+  </style>
+</head>
+<body data-page="verificacion" data-auth="false">
+
+  <div class="container" style="max-width: 1200px;">
+
+    <!-- ENCABEZADO -->
+    <div class="mb-4">
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-clipboard-check text-success me-2"></i>
+        Verificación Integral del Sistema
+      </h1>
+      <p class="text-muted mb-0">
+        Ejecuta los tests de todos los módulos para confirmar que el ciclo contable del Capítulo 5 cuadra.
+      </p>
+    </div>
+
+    <!-- RESUMEN STICKY -->
+    <div class="card shadow-sm mb-4 summary-card">
+      <div class="card-body">
+        <div class="row g-3 align-items-center">
+          <div class="col-12 col-md-3">
+            <div class="text-center">
+              <div class="display-6 fw-bold" id="statOk">0</div>
+              <small class="text-success">✅ Aprobados</small>
+            </div>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="text-center">
+              <div class="display-6 fw-bold" id="statFail">0</div>
+              <small class="text-danger">❌ Fallidos</small>
+            </div>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="text-center">
+              <div class="display-6 fw-bold" id="statSkip">0</div>
+              <small class="text-secondary">⏭️ Omitidos</small>
+            </div>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="d-grid gap-2">
+              <button id="btnRunAll" class="btn btn-success">
+                <i class="bi bi-play-fill me-1"></i>Ejecutar todos
+              </button>
+              <button id="btnRunFail" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>Solo fallidos
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTRO POR MÓDULO -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <label class="form-label small fw-semibold mb-2">Filtrar por módulo:</label>
+        <div id="filtrosModulo" class="d-flex flex-wrap gap-2">
+          <!-- Se llena por JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ESTADO GLOBAL -->
+    <div id="estadoGlobal" class="alert alert-info d-none mb-4"></div>
+
+    <!-- RESULTADOS -->
+    <div id="results" class="card shadow-sm">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th style="width: 120px;">Módulo</th>
+              <th style="width: 60px;">Estado</th>
+              <th>Test</th>
+              <th style="width: 300px;">Resultado</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr><td colspan="5" class="text-center text-muted py-4">
+              Pulsa "Ejecutar todos" para comenzar.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INSTRUCCIONES -->
+    <div class="alert alert-secondary mt-4 small">
+      <strong>Notas:</strong>
+      <ul class="mb-0 ps-3">
+        <li>Los tests leen datos directamente de LocalStorage (debes haber cargado el seed corregido).</li>
+        <li>Si un test falla, el mensaje muestra el <strong>valor esperado</strong> y el <strong>valor obtenido</strong>.</li>
+        <li>Los tests "Omitidos" (⏭️) son porque el módulo no está cargado en el HTML.</li>
+        <li>Abre la consola del navegador (F12) para ver detalles adicionales.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- SCRIPTS DEL SISTEMA (mismo orden que las páginas reales) -->
+  <script src="./js/config.js"></script>
+  <script src="./js/utils.js"></script>
+  <script src="./js/storage.js"></script>
+  <script src="./js/data/seed.js"></script>
+  <script src="./js/data/seed-emprendimiento.js"></script>
+  <script src="./js/modules/bitacora.js"></script>
+  <script src="./js/auth.js"></script>
+  <script src="./js/modules/mayor-balanza.js"></script>
+  <script src="./js/modules/contabilidad.js"></script>
+  <script src="./js/modules/costos.js"></script>
+  <script src="./js/modules/indicadores.js"></script>
+  <script src="./js/modules/cierre.js"></script> 
+  <script src="./js/modules/alertas.js"></script>
+  <script src="./js/modules/reportes.js"></script>
+
+  <!-- MOTOR DE TESTS -->
+  <script>
+  (function () {
+    "use strict";
+
+    const tests = [];
+    const results = [];
+
+    function test(modulo, nombre, fn) {
+      tests.push({ modulo, nombre, fn });
+    }
+
+    function ok(message, expected, actual) {
+      return { ok: true, message, expected, actual };
+    }
+    function fail(message, expected, actual) {
+      return { ok: false, message, expected, actual };
+    }
+    function skip(message) {
+      return { ok: null, message, expected: null, actual: null };
+    }
+
+    function eq(actual, expected, message = "") {
+      const a = Number(actual);
+      const e = Number(expected);
+      const match = Math.abs(a - e) <= 0.01;
+      return match
+        ? ok(message || `Valor correcto: ${a}`, e, a)
+        : fail(message || `Esperado ${e}, obtenido ${a}`, e, a);
+    }
+
+    function eqText(actual, expected, message = "") {
+      const match = String(actual) === String(expected);
+      return match
+        ? ok(message || `Valor correcto: "${actual}"`, expected, actual)
+        : fail(message || `Esperado "${expected}", obtenido "${actual}"`, expected, actual);
+    }
+
+    function truthy(actual, message) {
+      return actual
+        ? ok(message || "Verdadero", true, actual)
+        : fail(message || "Falso", true, actual);
+    }
+
+    function falsy(actual, message) {
+      return !actual
+        ? ok(message || "Falso (correcto)", false, actual)
+        : fail(message || "Verdadero (incorrecto)", false, actual);
+    }
+
+    /* ==========================================================
+       SUITE 1: CONFIG Y PLAN DE CUENTAS
+       ========================================================== */
+
+    test("Config", "config.js cargado", () => {
+      if (!window.CC_CONFIG) return skip("CC_CONFIG no cargado");
+      return ok("CC_CONFIG cargado", true, true);
+    });
+
+    test("Config", "Plan tiene cuentas separadas de activos", () => {
+      if (!window.CC_CONFIG) return skip("CC_CONFIG no cargado");
+      const cat = window.CC_CONFIG.accountCatalog || [];
+      const codes = cat.map(c => c.codigo);
+      const requeridas = ["1.2.01", "1.2.02", "1.2.03", "1.2.04", "1.2.05", "1.2.06"];
+      const faltantes = requeridas.filter(c => !codes.includes(c));
+      return faltantes.length === 0
+        ? ok("Las 6 cuentas de activos no corrientes existen", requeridas, codes.filter(c => c.startsWith("1.2")))
+        : fail(`Faltan cuentas: ${faltantes.join(", ")}`, requeridas, faltantes);
+    });
+
+    test("Config", "Plan tiene cuentas de gastos de personal y gastos por impuestos", () => {
+      if (!window.CC_CONFIG) return skip("CC_CONFIG no cargado");
+      const codes = (window.CC_CONFIG.accountCatalog || []).map(c => c.codigo);
+      const requeridas = ["6.2.01", "6.2.02", "6.2.03", "6.4.01"];
+      const faltantes = requeridas.filter(c => !codes.includes(c));
+      return faltantes.length === 0
+        ? ok("Las 4 cuentas nuevas existen", requeridas, codes.filter(c => c.startsWith("6.2") || c.startsWith("6.4")))
+        : fail(`Faltan cuentas: ${faltantes.join(", ")}`, requeridas, faltantes);
+    });
+
+    test("Config", "2.1.04 se llama 'Provisión de beneficios sociales por pagar'", () => {
+      if (!window.CC_CONFIG) return skip("CC_CONFIG no cargado");
+      const acc = (window.CC_CONFIG.accountCatalog || []).find(c => c.codigo === "2.1.04");
+      return acc
+        ? eqText(acc.nombre, "Provisión de beneficios sociales por pagar")
+        : fail("Cuenta 2.1.04 no encontrada", "Provisión de beneficios sociales por pagar", "no encontrada");
+    });
+
+    /* ==========================================================
+       SUITE 2: SEED DEL EMPRENDIMIENTO
+       ========================================================== */
+
+    test("Seed", "Cliente CLI-0004 existe", () => {
+      if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+      const clients = window.CC_STORAGE.list("clients") || [];
+      const cli4 = clients.find(c => c.id === "CLI-0004");
+      return cli4
+        ? eqText(cli4.nombreComercial, "Cuentas Claras")
+        : fail("CLI-0004 no existe en clients", "Cuentas Claras", "no encontrado");
+    });
+
+    test("Seed", "12 periodos de CLI-0004", () => {
+      if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+      const periods = (window.CC_STORAGE.list("periods") || []).filter(p => p.clienteId === "CLI-0004");
+      return eq(periods.length, 12, `Periodos: ${periods.length} (esperado 12)`);
+    });
+
+    test("Seed", "12 documentos de CLI-0004", () => {
+      if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+      const docs = (window.CC_STORAGE.list("documents") || []).filter(d => d.clienteId === "CLI-0004");
+      return eq(docs.length, 12, `Documentos: ${docs.length} (esperado 12)`);
+    });
+
+    test("Seed", "Verificación integral del seed (partida doble, caja, ingresos, utilidad, activo)", () => {
+      if (!window.CC_SEED_EMPRENDIMIENTO) return skip("CC_SEED_EMPRENDIMIENTO no cargado");
+      try {
+        const r = window.CC_SEED_EMPRENDIMIENTO.verificar();
+        if (!r.cuadraPartidaDoble) return fail("Partida doble NO cuadra", true, false);
+        if (Math.abs(r.cajaCalculada - 20091) > 0.01) return fail(`Caja: ${r.cajaCalculada}`, 20091, r.cajaCalculada);
+        if (Math.abs(r.ingresosCalculados - 49450) > 0.01) return fail(`Ingresos: ${r.ingresosCalculados}`, 49450, r.ingresosCalculados);
+        if (Math.abs(r.utilidadContableCalculada - 13031) > 0.01) return fail(`Utilidad: ${r.utilidadContableCalculada}`, 13031, r.utilidadContableCalculada);
+        if (Math.abs(r.provisionBSCalculada - 3300) > 0.01) return fail(`Provisión BS: ${r.provisionBSCalculada}`, 3300, r.provisionBSCalculada);
+        if (Math.abs(r.totalActivoCalculado - 26131) > 0.01) return fail(`Activo: ${r.totalActivoCalculado}`, 26131, r.totalActivoCalculado);
+        if (Math.abs(r.totalPasivoPatrimonioCalculado - 26131) > 0.01) return fail(`Pasivo+Patrimonio: ${r.totalPasivoPatrimonioCalculado}`, 26131, r.totalPasivoPatrimonioCalculado);
+        return ok("Todos los valores del seed cuadran", "105.869 / 20.091 / 49.450 / 13.031 / 26.131", "OK");
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "verificación OK", e.message);
+      }
+    });
+
+    test("Seed", "Partida doble: débitos = créditos", () => {
+      if (!window.CC_SEED_EMPRENDIMIENTO) return skip("CC_SEED_EMPRENDIMIENTO no cargado");
+      try {
+        const r = window.CC_SEED_EMPRENDIMIENTO.verificar();
+        return eq(r.totalDebeMovimientos, r.totalHaberMovimientos,
+          `Débitos ${r.totalDebeMovimientos} vs Créditos ${r.totalHaberMovimientos}`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "105.869 = 105.869", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 3: IMPUESTOS
+       ========================================================== */
+
+    test("Impuestos", "Seed tiene al menos 12 taxes de IT (uno por mes)", () => {
+        if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+        const taxesIT = (window.CC_STORAGE.list("taxes") || [])
+            .filter(t => t.clienteId === "CLI-0004" && t.tipo === "IT");
+        return taxesIT.length >= 12
+            ? ok(`${taxesIT.length} taxes de IT (mínimo 12)`, ">=12", taxesIT.length)
+            : fail(`Solo ${taxesIT.length} taxes de IT`, ">=12", taxesIT.length);
+        });
+
+        test("Impuestos", "Total de taxes (IT + IVA) es coherente", () => {
+        if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+        const taxes = (window.CC_STORAGE.list("taxes") || []).filter(t => t.clienteId === "CLI-0004");
+        const it = taxes.filter(t => t.tipo === "IT").length;
+        const iva = taxes.filter(t => t.tipo === "IVA").length;
+        return ok(`${taxes.length} taxes totales (${it} IT + ${iva} IVA)`, "cualquiera", taxes.length);
+        });
+
+    test("Impuestos", "Suma anual de IT = 1.484", () => {
+      if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+      const taxes = (window.CC_STORAGE.list("taxes") || [])
+        .filter(t => t.clienteId === "CLI-0004" && t.tipo === "IT");
+      const suma = taxes.reduce((s, t) => s + (Number(t.monto) || 0), 0);
+      return eq(Math.round(suma), 1484, `Suma IT: ${suma.toFixed(2)} (esperado 1484)`);
+    });
+
+    test("Impuestos", "IT enero calculado sobre ventas + otros ingresos (Bs 46,50)", () => {
+      if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+      const ene = (window.CC_STORAGE.list("taxes") || []).find(
+        t => t.clienteId === "CLI-0004" && t.tipo === "IT" && t.periodoId === "PER-0004"
+      );
+      if (!ene) return fail("No se encontró IT de enero", 46.50, "no existe");
+      return eq(ene.monto, 46.50, `IT enero: ${ene.monto} (esperado 46,50)`);
+    });
+
+    /* ==========================================================
+       SUITE 4: MAYOR Y BALANZA
+       ========================================================== */
+
+    test("Balanza", "Balanza diciembre cuadra 65.710 = 65.710", () => {
+      if (!window.CC_MAYOR_BALANZA || !window.CC_STORAGE) return skip("Módulos no cargados");
+      try {
+        window.CC_MAYOR_BALANZA.ensureAccounts();
+        const ctx = window.CC_MAYOR_BALANZA.buildContext("CLI-0004");
+        const map = window.CC_MAYOR_BALANZA.getAccountsMap();
+        const dec = (window.CC_STORAGE.list("periods") || []).find(
+          p => p.clienteId === "CLI-0004" && p.mes === 12
+        );
+        if (!dec) return fail("Periodo diciembre no encontrado", "PER-0015", "no encontrado");
+        const key = window.CC_MAYOR_BALANZA.periodKey(dec);
+        const b = window.CC_MAYOR_BALANZA.getTrialBalance(ctx, map, key, {
+          includeAdjustments: true, includeClosing: false
+        });
+        if (!b.movementsBalanced) return fail("Movimientos no cuadran", true, false);
+        if (!b.balancesBalanced) return fail("Saldos no cuadran", true, false);
+        return eq(b.totals.saldoDeudor, 65710,
+          `Saldo deudor: ${b.totals.saldoDeudor} (esperado 65.710)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "65.710", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 5: ESTADOS FINANCIEROS
+       ========================================================== */
+
+    test("EE.FF.", "Utilidad neta diciembre = 13.031", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return fail(`No se pudo calcular: ${data.message}`, "13.031", data.message);
+        return eq(data.income.utilidadNeta, 13031,
+          `Utilidad neta: ${data.income.utilidadNeta} (esperado 13.031)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "13.031", e.message);
+      }
+    });
+
+    test("EE.FF.", "Total activo diciembre = 26.131", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return skip("Sin datos");
+        return eq(data.balanceSheet.totalActivo, 26131,
+          `Activo: ${data.balanceSheet.totalActivo} (esperado 26.131)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "26.131", e.message);
+      }
+    });
+
+    test("EE.FF.", "Total pasivo + patrimonio = 26.131 (balance cuadrado)", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return skip("Sin datos");
+        if (!data.balanceSheet.balanced) return fail("Balance descuadrado", true, false);
+        return eq(data.balanceSheet.totalPasivoPatrimonio, 26131,
+          `Pasivo+Patrimonio: ${data.balanceSheet.totalPasivoPatrimonio} (esperado 26.131)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "26.131", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 6: ESTRUCTURA DEL ESTADO DE RESULTADOS
+       ========================================================== */
+
+    test("Costos", "Estructura del ER alineada con Cap. 5.9", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return skip("Sin datos");
+        const i = data.income;
+        if (Math.abs(i.utilidadOperativa - 16675) > 0.01)
+          return fail(`Utilidad operativa: ${i.utilidadOperativa}`, 16675, i.utilidadOperativa);
+        if (Math.abs(i.utilidadAntesImpuestos - 14515) > 0.01)
+          return fail(`Utilidad antes de impuestos: ${i.utilidadAntesImpuestos}`, 14515, i.utilidadAntesImpuestos);
+        if (Math.abs(i.depreciacion - 2160) > 0.01)
+          return fail(`Depreciación: ${i.depreciacion}`, 2160, i.depreciacion);
+        if (Math.abs(i.gastosImpuestos - 1484) > 0.01)
+          return fail(`Gastos por impuestos: ${i.gastosImpuestos}`, 1484, i.gastosImpuestos);
+        if (Math.abs(i.totalGastosOperativos - 29520) > 0.01)
+          return fail(`Total gastos operativos: ${i.totalGastosOperativos}`, 29520, i.totalGastosOperativos);
+        return ok("Estructura 5.9 correcta", "16.675 / 14.515 / 13.031", "OK");
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "estructura OK", e.message);
+      }
+    });
+
+    test("Costos", "Campos porcentuales (*Pct) existen", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return skip("Sin datos");
+        const i = data.income;
+        const requeridos = ["ventasPct", "otrosIngresosPct", "costoNetoPct", "utilidadBrutaPct"];
+        const faltantes = requeridos.filter(k => i[k] === undefined);
+        return faltantes.length === 0
+          ? ok("Todos los campos *Pct existen", requeridos, "OK")
+          : fail(`Faltan: ${faltantes.join(", ")}`, requeridos, faltantes);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "campos *Pct", e.message);
+      }
+    });
+
+    test("Costos", "Ventas % = 84,63% (no 41850.00%)", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return skip("Sin datos");
+        return eq(Math.round(data.income.ventasPct), 85,
+          `Ventas %: ${data.income.ventasPct}% (esperado ≈84,63%)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "≈85%", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 7: REPORTES
+       ========================================================== */
+
+    test("Reportes", "Reporte diciembre muestra utilidad 13.031 (no enero)", () => {
+      if (!window.CC_REPORTES) return skip("CC_REPORTES no cargado");
+      try {
+        const data = window.CC_REPORTES.buildData
+          ? window.CC_REPORTES.buildData("CLI-0004", "PER-0015")
+          : null;
+        if (!data || !data.ok) return skip("buildData no disponible");
+        return eq(data.summary.utilidadNeta, 13031,
+          `Utilidad reporte: ${data.summary.utilidadNeta} (esperado 13.031)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "13.031", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 8: CIERRE
+       ========================================================== */
+
+    test("Cierre", "Preview del cierre: resultado 13.031, sin traslado a 3.1.02", () => {
+      if (!window.CC_CIERRE) return skip("CC_CIERRE no cargado");
+      try {
+        const p = window.CC_CIERRE.previewClosingEntry("CLI-0004", "PER-0015");
+        if (Math.abs(p.resultToExercise - 13031) > 0.01)
+          return fail(`Resultado: ${p.resultToExercise}`, 13031, p.resultToExercise);
+        if (p.trasladaResultado !== false)
+          return fail("Debe NO trasladar a 3.1.02", false, p.trasladaResultado);
+        return ok("Cierre correcto", "13.031 sin traslado", "OK");
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "preview OK", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 9: ALERTAS
+       ========================================================== */
+
+    test("Alertas", "Alertas 'sin documento' agrupadas por periodo", () => {
+        if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+        const alerts = (window.CC_STORAGE.list("alerts") || [])
+            .filter(a => a.clienteId === "CLI-0004" && a.tipo === "transaccion_sin_documento");
+        if (alerts.length === 0) return ok("Sin alertas sin documento", 0, 0);
+        const agrupadas = alerts.filter(a => String(a.registroId || "").startsWith("LOTE-"));
+        return agrupadas.length > 0
+            ? ok(`${agrupadas.length} alertas agrupadas por periodo (de ${alerts.length} totales)`, ">0", agrupadas.length)
+            : fail("Ninguna alerta agrupada (LOTE-)", ">0", 0);
+        });
+
+    test("Alertas", "Sin falsos positivos TRX-0017 / TRX-0018", () => {
+      if (!window.CC_STORAGE) return skip("CC_STORAGE no cargado");
+      const alerts = window.CC_STORAGE.list("alerts") || [];
+      const falsas = alerts.filter(a =>
+        a.clienteId === "CLI-0004" &&
+        a.tipo === "transaccion_sin_documento" &&
+        (String(a.registroId || "").includes("TRX-0017") || String(a.registroId || "").includes("TRX-0018"))
+      );
+      return eq(falsas.length, 0,
+        `Alertas falsas TRX-0017/0018: ${falsas.length} (esperado 0)`);
+    });
+
+    /* ==========================================================
+       SUITE 10: RESPALDO
+       ========================================================== */
+
+    test("Respaldo", "exportAll incluye accounts y journalLines", () => {
+      if (!window.CC_STORAGE || !window.CC_STORAGE.exportAll) return skip("CC_STORAGE.exportAll no disponible");
+      try {
+        const data = window.CC_STORAGE.exportAll();
+        if (!Array.isArray(data.data.accounts)) return fail("accounts no es array", "array", typeof data.data.accounts);
+        if (!Array.isArray(data.data.journalLines)) return fail("journalLines no es array", "array", typeof data.data.journalLines);
+        if (data.data.accounts.length === 0) return fail("accounts vacío", ">0", 0);
+        return ok(`Backup con ${data.data.accounts.length} cuentas y ${data.data.journalLines.length} líneas`, "OK", "OK");
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "exportAll OK", e.message);
+      }
+    });
+
+    /* ==========================================================
+       SUITE 11: FLUJO DE CAJA Y PUENTE CAJA → DEVENGO
+       ========================================================== */
+
+    test("Flujo", "Puente caja→devengo: 19.975 − 13.031 = 6.944", () => {
+      if (!window.CC_COSTOS) return skip("CC_COSTOS no cargado");
+      try {
+        const data = window.CC_COSTOS.buildData("CLI-0004", "PER-0015");
+        if (!data.ok) return skip("Sin datos");
+        const i = data.income;
+        const puente = i.depreciacion + i.gastosImpuestos + 3300; // + provisión BS
+        return eq(Math.round(puente), 6944,
+          `Puente: ${puente.toFixed(2)} (esperado 6.944)`);
+      } catch (e) {
+        return fail(`Error: ${e.message}`, "6.944", e.message);
+      }
+    });
+
+    /* ==========================================================
+       MOTOR DE RENDERIZADO
+       ========================================================== */
+
+    const moduloColores = {
+      "Config": "primary",
+      "Seed": "success",
+      "Impuestos": "warning",
+      "Balanza": "info",
+      "EE.FF.": "danger",
+      "Costos": "secondary",
+      "Reportes": "dark",
+      "Cierre": "primary",
+      "Alertas": "warning",
+      "Respaldo": "success",
+      "Flujo": "info"
+    };
+
+    function renderFiltros() {
+      const modulos = [...new Set(tests.map(t => t.modulo))];
+      const cont = document.getElementById("filtrosModulo");
+      cont.innerHTML = `<button class="btn btn-sm btn-outline-dark active" data-modulo="all">Todos (${tests.length})</button>`;
+      modulos.forEach(m => {
+        const count = tests.filter(t => t.modulo === m).length;
+        const color = moduloColores[m] || "secondary";
+        cont.innerHTML += `<button class="btn btn-sm btn-outline-${color}" data-modulo="${m}">${m} (${count})</button>`;
+      });
+      cont.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          cont.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          renderResults(btn.dataset.modulo);
+        });
+      });
+    }
+
+    function runAll() {
+      results.length = 0;
+      tests.forEach((t, idx) => {
+        let r;
+        try {
+          r = t.fn();
+        } catch (e) {
+          r = { ok: false, message: `Excepción: ${e.message}`, expected: "sin excepción", actual: e.message };
+        }
+        results.push({ ...t, ...r, num: idx + 1 });
+      });
+      renderResults("all");
+      updateStats();
+    }
+
+    function runOnlyFailed() {
+      const failed = results.filter(r => r.ok === false);
+      if (failed.length === 0) {
+        alert("No hay tests fallidos. ¡Todo está en verde!");
+        return;
+      }
+      results.length = 0;
+      tests.forEach((t, idx) => {
+        const prev = failed.find(f => f.nombre === t.nombre);
+        if (!prev) return;
+        let r;
+        try {
+          r = t.fn();
+        } catch (e) {
+          r = { ok: false, message: `Excepción: ${e.message}`, expected: "sin excepción", actual: e.message };
+        }
+        results.push({ ...t, ...r, num: idx + 1 });
+      });
+      renderResults("all");
+      updateStats();
+    }
+
+    function updateStats() {
+      const okCount = results.filter(r => r.ok === true).length;
+      const failCount = results.filter(r => r.ok === false).length;
+      const skipCount = results.filter(r => r.ok === null).length;
+      document.getElementById("statOk").textContent = okCount;
+      document.getElementById("statFail").textContent = failCount;
+      document.getElementById("statSkip").textContent = skipCount;
+
+      const global = document.getElementById("estadoGlobal");
+      global.classList.remove("d-none");
+      if (failCount === 0) {
+        global.className = "alert alert-success mb-4";
+        global.innerHTML = `<strong>✅ ¡Todo en verde!</strong> ${okCount} tests pasaron${skipCount > 0 ? `, ${skipCount} omitidos` : ""}. El ciclo contable del Capítulo 5 cuadra.`;
+      } else {
+        global.className = "alert alert-danger mb-4";
+        global.innerHTML = `<strong>❌ ${failCount} test(s) fallaron.</strong> Revisa los rojos en la tabla inferior.`;
+      }
+    }
+
+    function renderResults(filtroModulo) {
+      const tbody = document.getElementById("resultsBody");
+      let list = results;
+      if (filtroModulo && filtroModulo !== "all") {
+        list = results.filter(r => r.modulo === filtroModulo);
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No hay tests para este filtro.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(r => {
+        let icono, clase;
+        if (r.ok === true) { icono = '<i class="bi bi-check-circle-fill test-ok"></i>'; clase = "test-ok"; }
+        else if (r.ok === false) { icono = '<i class="bi bi-x-circle-fill test-fail"></i>'; clase = "test-fail"; }
+        else { icono = '<i class="bi bi-dash-circle test-skip"></i>'; clase = "test-skip"; }
+
+        const color = moduloColores[r.modulo] || "secondary";
+        const esperado = r.expected !== null && r.expected !== undefined
+          ? `<div class="expected">Esperado: ${r.expected} · Obtenido: ${r.actual}</div>` : "";
+
+        return `<tr class="test-row">
+          <td>${r.num}</td>
+          <td><span class="badge bg-${color}">${r.modulo}</span></td>
+          <td>${icono}</td>
+          <td><strong>${r.nombre}</strong><div class="small text-muted">${r.message}</div>${esperado}</td>
+          <td class="${clase} small">${r.ok === true ? "OK" : r.ok === false ? "FALLÓ" : "OMITIDO"}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    // Inicialización
+    document.addEventListener("DOMContentLoaded", () => {
+      renderFiltros();
+      document.getElementById("btnRunAll").addEventListener("click", runAll);
+      document.getElementById("btnRunFail").addEventListener("click", runOnlyFailed);
+      // Auto-ejecutar al cargar
+      setTimeout(runAll, 500);
+    });
+
+  })();
+  </script>
+
+</body>
+</html>

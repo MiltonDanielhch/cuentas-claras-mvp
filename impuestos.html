@@ -326,6 +326,62 @@
             </div>
           </div>
         </div>
+        <!-- ✅ NUEVO: Resumen anual de impuestos -->
+        <div class="card mb-4">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 fw-semibold">
+              <i class="bi bi-calendar-range me-1"></i> Resumen anual 2026
+            </h2>
+            <button class="btn btn-sm btn-outline-secondary" type="button"
+              data-bs-toggle="collapse" data-bs-target="#resumenAnualBody">
+              <i class="bi bi-chevron-down"></i> Mostrar / ocultar
+            </button>
+          </div>
+          <div id="resumenAnualBody" class="collapse">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Mes</th>
+                      <th class="text-end">Ventas + otros ingresos</th>
+                      <th class="text-end">IT 3%</th>
+                      <th class="text-end">IVA por pagar</th>
+                      <th class="text-end">Total estimado</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaResumenAnual">
+                    <tr><td colspan="6" class="text-center text-muted py-4">Seleccione un cliente.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ NUEVO: Guía tributaria Bolivia -->
+        <div class="card mb-4">
+          <div class="card-header bg-white">
+            <h2 class="h6 mb-0 fw-semibold">
+              <i class="bi bi-book me-1"></i> Guía tributaria Bolivia
+            </h2>
+            <small class="text-muted">Información referencial del SIN. No sustituye la consulta profesional.</small>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Selecciona un régimen para ver la guía:</label>
+              <select id="selectRegimenGuia" class="form-select form-select-sm">
+                <option value="general">Régimen General (RG)</option>
+                <option value="simplificado">Régimen Tributario Simplificado (RTS)</option>
+                <option value="siete">Régimen Especial SIETE (en discusión)</option>
+              </select>
+            </div>
+            <div id="guiaTributariaBody">
+              <p class="text-muted mb-0">Selecciona un régimen para ver la guía.</p>
+            </div>
+          </div>
+        </div>
 
       </main>
     </div>
@@ -386,6 +442,7 @@
 
   <!-- Scripts del proyecto -->
   <script src="./js/config.js" defer></script>
+  <script src="./js/config-impuestos-bolivia.js" defer></script>
   <script src="./js/utils.js" defer></script>
   <script src="./js/storage.js" defer></script>
   <script src="./js/data/seed.js" defer></script>

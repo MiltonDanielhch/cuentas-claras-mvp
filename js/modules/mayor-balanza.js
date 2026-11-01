@@ -2,8 +2,16 @@
    Cuentas Claras MVP
    Motor de cálculo del Libro Mayor, Balanza de comprobación,
    Balanza ajustada y base para Estados Financieros
-   Fase 8
+   Fase 8.1
    ----------------------------------------------------------------
+   ✅ CORREGIDO:
+   - ensureAccounts() ahora hace UPSERT: crea cuentas nuevas y
+     actualiza nombre/tipo/naturaleza de las existentes.
+     Esto permite migrar del plan de cuentas viejo al nuevo
+     (1.2.01 equipo, 1.2.02 mobiliario, 1.2.04/05/06 depreciaciones,
+     6.2.01/02/03 gastos de personal, 6.4.01 gastos por impuestos).
+   - Se mantiene toda la lógica de cálculo existente.
+
    Principio: Mayor y Balanza NO se persisten. Se calculan en vivo
    desde cc_journal_lines considerando solo asientos "vigente".
 
@@ -40,24 +48,85 @@ window.CC_MAYOR_BALANZA = (function () {
   }
 
   /* ---------------------------------------------------------
-     Asegura que el plan de cuentas exista en LocalStorage
+     ✅ CORREGIDO: ensureAccounts con UPSERT
+     Crea cuentas nuevas y actualiza metadatos de las existentes
+     para reflejar cambios del config.js (nombres, tipos, etc.).
      --------------------------------------------------------- */
   function ensureAccounts() {
-    const accounts = storage.list("accounts");
-    if (accounts.length > 0) return;
+    const existing = storage.list("accounts") || [];
+    const existingByCode = {};
 
-    (cfg.accountCatalog || []).forEach((account) => {
-      storage.create("accounts", { ...account }, "ACC");
+    existing.forEach((a) => {
+      if (a && a.codigo) existingByCode[String(a.codigo)] = a;
     });
 
-    if (window.CC_BITACORA) {
+    const catalog = cfg.accountCatalog || [];
+    let creadas = 0;
+    let actualizadas = 0;
+
+    catalog.forEach((account) => {
+      const code = String(account.codigo || "");
+      if (!code) return;
+
+      const found = existingByCode[code];
+
+      if (!found) {
+        // ✅ Crear cuenta nueva
+        try {
+          storage.create("accounts", { ...account }, "ACC");
+          creadas++;
+        } catch (error) {
+          console.error(`No se pudo crear la cuenta ${code}:`, error);
+        }
+        return;
+      }
+
+      // ✅ Actualizar campos clave si cambiaron
+      const needsUpdate =
+        found.nombre !== account.nombre ||
+        found.tipo !== account.tipo ||
+        found.naturaleza !== account.naturaleza ||
+        Boolean(found.esContra) !== Boolean(account.esContra) ||
+        Boolean(found.esTemporal) !== Boolean(account.esTemporal) ||
+        Number(found.nivel) !== Number(account.nivel) ||
+        String(found.codigoPadre || "") !== String(account.codigoPadre || "") ||
+        String(found.estado || "") !== String(account.estado || "");
+
+      if (needsUpdate) {
+        try {
+          if (typeof storage.update === "function") {
+            storage.update("accounts", found.id, { ...found, ...account });
+          } else {
+            // Fallback: reemplazo directo en la lista
+            const list = storage.list("accounts").map((a) =>
+              a.id === found.id ? { ...a, ...account } : a
+            );
+            if (typeof storage.setList === "function") {
+              storage.setList("accounts", list);
+            } else {
+              localStorage.setItem(
+                cfg.keys.accounts,
+                JSON.stringify(list)
+              );
+            }
+          }
+          actualizadas++;
+        } catch (error) {
+          console.error(`No se pudo actualizar la cuenta ${code}:`, error);
+        }
+      }
+    });
+
+    if ((creadas > 0 || actualizadas > 0) && window.CC_BITACORA) {
       window.CC_BITACORA.log(
-        "cargar_plan_cuentas",
+        "migrar_plan_cuentas",
         "accounts",
         null,
-        "Plan de cuentas inicial migrado desde configuración (Fase 8)"
+        `Plan de cuentas sincronizado con config.js: ${creadas} creadas, ${actualizadas} actualizadas (Fase 8.1)`
       );
     }
+
+    return { creadas, actualizadas };
   }
 
   /* ---------------------------------------------------------

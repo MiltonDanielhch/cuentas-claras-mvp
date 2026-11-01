@@ -1,7 +1,22 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de reporte mensual en lenguaje sencillo
-   Fase 11
+   Fase 11.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - Vista previa se limpia al cambiar de periodo (no más
+     "diciembre muestra enero").
+   - renderIncomeSection alineado con la estructura del
+     Capítulo 5.9: Utilidad bruta → Gastos operativos →
+     Utilidad operativa → Depreciación → Utilidad antes de
+     impuestos → Gastos por impuestos → Utilidad neta.
+   - IT etiquetado como "ventas + otros ingresos".
+   - buildFallbackData acepta ambos conceptos de IT.
+   - summary.it usa base.income.gastosImpuestos (1.484) para
+     coincidir con la utilidad neta, no taxes.it (1.483,50).
+   - buildResumen guarda gastosOperativos, depreciacion,
+     utilidadAntesImpuestos y gastosImpuestos.
+   - renderReportsTable ordena y evita duplicados visuales.
    ========================================================= */
 
 window.CC_REPORTES = (function () {
@@ -12,19 +27,12 @@ window.CC_REPORTES = (function () {
   const costos = window.CC_COSTOS;
 
   const monthNames = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre"
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
+
+  // Conceptos válidos de IT (acepta ambos)
+  const IT_CONCEPTOS = ["ventas_brutas", "ventas_mas_otros_ingresos"];
 
   const elements = {};
 
@@ -55,7 +63,6 @@ window.CC_REPORTES = (function () {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "No calculable";
     }
-
     return `${Number(value).toFixed(2)}%`;
   }
 
@@ -63,7 +70,6 @@ window.CC_REPORTES = (function () {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "No calculable";
     }
-
     return Number(value).toFixed(2);
   }
 
@@ -133,16 +139,9 @@ window.CC_REPORTES = (function () {
     let cls = "bg-secondary";
     let label = estado;
 
-    if (estado === "abierto") {
-      cls = "cc-status-abierto";
-      label = "Abierto";
-    } else if (estado === "en_revision") {
-      cls = "cc-status-en_revision";
-      label = "En revisión";
-    } else if (estado === "cerrado") {
-      cls = "cc-status-cerrado";
-      label = "Cerrado";
-    }
+    if (estado === "abierto") { cls = "cc-status-abierto"; label = "Abierto"; }
+    else if (estado === "en_revision") { cls = "cc-status-en_revision"; label = "En revisión"; }
+    else if (estado === "cerrado") { cls = "cc-status-cerrado"; label = "Cerrado"; }
 
     elements.repEstadoPeriodo.className = `badge ${cls} w-100 text-center py-2`;
     elements.repEstadoPeriodo.textContent = label;
@@ -218,12 +217,10 @@ window.CC_REPORTES = (function () {
 
   function nivelWeight(nivel) {
     const safe = String(nivel || "").toLowerCase();
-
     if (safe === "urgente") return 1;
     if (safe === "vencida") return 2;
     if (safe === "preventiva") return 3;
     if (safe === "informativa") return 4;
-
     return 9;
   }
 
@@ -239,14 +236,10 @@ window.CC_REPORTES = (function () {
       .sort((a, b) => {
         const wa = nivelWeight(a.nivel);
         const wb = nivelWeight(b.nivel);
-
         if (wa !== wb) return wa - wb;
-
         const dateA = String(a.fechaAlerta || "");
         const dateB = String(b.fechaAlerta || "");
-
         if (dateA !== dateB) return dateB.localeCompare(dateA);
-
         return String(b.id || "").localeCompare(String(a.id || ""));
       });
   }
@@ -281,15 +274,15 @@ window.CC_REPORTES = (function () {
     return steps;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: buildFallbackData acepta ambos conceptos de IT
+     --------------------------------------------------------- */
   function buildFallbackData(clientId, periodoId) {
     const client = storage.get("clients", clientId);
     const period = storage.get("periods", periodoId);
 
     if (!client || !period) {
-      return {
-        ok: false,
-        message: "Cliente o periodo no encontrado."
-      };
+      return { ok: false, message: "Cliente o periodo no encontrado." };
     }
 
     const transactions = storage
@@ -317,15 +310,12 @@ window.CC_REPORTES = (function () {
 
     const taxes = storage
       .list("taxes")
-      .filter(
-        (tax) =>
-          tax.clienteId === clientId &&
-          tax.periodoId === periodoId
-      );
+      .filter((tax) => tax.clienteId === clientId && tax.periodoId === periodoId);
 
+    // ✅ Acepta ambos conceptos
     const it = round2(
       taxes
-        .filter((tax) => tax.tipo === "IT" && tax.concepto === "ventas_brutas")
+        .filter((tax) => tax.tipo === "IT" && IT_CONCEPTOS.includes(tax.concepto))
         .reduce((total, tax) => total + (Number(tax.monto) || 0), 0)
     );
 
@@ -352,31 +342,15 @@ window.CC_REPORTES = (function () {
 
     const recommendations = [];
 
-    if (!transactions.length) {
-      recommendations.push("No hay transacciones activas registradas en este periodo.");
-    }
+    if (!transactions.length) recommendations.push("No hay transacciones activas registradas en este periodo.");
+    if (ventas <= 0) recommendations.push("No se registraron ventas en el periodo. Revise el módulo Transacciones.");
 
-    if (ventas <= 0) {
-      recommendations.push("No se registraron ventas en el periodo. Revise el módulo Transacciones.");
-    }
+    if (utilidadNeta < 0) recommendations.push("El periodo presenta pérdida neta. Conviene revisar precios, compras y gastos.");
+    else if (utilidadNeta > 0) recommendations.push("El periodo presenta utilidad neta positiva según los registros operativos.");
 
-    if (utilidadNeta < 0) {
-      recommendations.push("El periodo presenta pérdida neta. Conviene revisar precios, compras y gastos.");
-    } else if (utilidadNeta > 0) {
-      recommendations.push("El periodo presenta utilidad neta positiva según los registros operativos.");
-    }
-
-    if (documentsPending > 0) {
-      recommendations.push(`Hay ${documentsPending} documento(s) pendiente(s) de validación.`);
-    }
-
-    if (transactionsWithoutDocument > 0) {
-      recommendations.push(`Hay ${transactionsWithoutDocument} transacción(es) sin documento de respaldo.`);
-    }
-
-    if (!taxes.length) {
-      recommendations.push("Aún no se calculan impuestos informativos para este periodo.");
-    }
+    if (documentsPending > 0) recommendations.push(`Hay ${documentsPending} documento(s) pendiente(s) de validación.`);
+    if (transactionsWithoutDocument > 0) recommendations.push(`Hay ${transactionsWithoutDocument} transacción(es) sin documento de respaldo.`);
+    if (!taxes.length) recommendations.push("Aún no se calculan impuestos informativos para este periodo.");
 
     recommendations.push(...buildNextSteps(period, alerts, taxes.length > 0));
 
@@ -389,27 +363,13 @@ window.CC_REPORTES = (function () {
       period,
       periodLabel: periodLabel(period),
       summary: {
-        ventas,
-        otrosIngresos: ingresos,
-        totalIngresos,
-        costoVentas: compras,
-        utilidadBruta,
-        gastos,
-        utilidadOperativa,
-        it,
-        iva,
-        utilidadNeta,
-        margenBruto: null,
-        margenNeto: null,
-        totalActivo: null,
-        totalPasivo: null,
-        totalPatrimonio: null,
-        balanceCuadrado: null,
-        liquidez: null,
-        endeudamiento: null,
-        roe: null,
-        peContable: null,
-        peEstimado: null
+        ventas, otrosIngresos: ingresos, totalIngresos,
+        costoVentas: compras, utilidadBruta, gastos,
+        utilidadOperativa, it, iva, utilidadNeta,
+        margenBruto: null, margenNeto: null,
+        totalActivo: null, totalPasivo: null, totalPatrimonio: null,
+        balanceCuadrado: null, liquidez: null, endeudamiento: null, roe: null,
+        peContable: null, peEstimado: null
       },
       income: null,
       balanceSheet: null,
@@ -425,10 +385,11 @@ window.CC_REPORTES = (function () {
     };
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: buildData con summary completo y uso de gastosImpuestos
+     --------------------------------------------------------- */
   function buildData(clientId, periodoId) {
-    if (!clientId || !periodoId) {
-      return null;
-    }
+    if (!clientId || !periodoId) return null;
 
     if (costos) {
       try {
@@ -445,17 +406,27 @@ window.CC_REPORTES = (function () {
             ...buildNextSteps(base.period, alerts, taxesCalculated)
           ];
 
+          const income = base.income;
+
+          // ✅ summary usa gastosOperativos y gastosImpuestos del income corregido
           const summary = {
-            ventas: base.income.ventas,
-            otrosIngresos: base.income.otrosIngresos,
-            totalIngresos: base.income.totalIngresos,
-            costoVentas: base.income.costoNeto,
-            utilidadBruta: base.income.utilidadBruta,
-            gastos: base.income.totalGastos,
-            utilidadOperativa: base.income.utilidadOperativa,
-            it: base.taxes.it,
+            ventas: income.ventas,
+            otrosIngresos: income.otrosIngresos,
+            totalIngresos: income.totalIngresos,
+            costoVentas: income.costoNeto,
+            utilidadBruta: income.utilidadBruta,
+
+            gastos: income.totalGastosOperativos,
+            totalGastosOperativos: income.totalGastosOperativos,
+            depreciacion: income.depreciacion,
+            utilidadAntesImpuestos: income.utilidadAntesImpuestos,
+            gastosImpuestos: income.gastosImpuestos,
+
+            // IT del reporte = gasto por impuestos (1.484), no taxes.it (1.483,50)
+            it: income.gastosImpuestos,
             iva: base.taxes.ivaPagar,
-            utilidadNeta: base.income.utilidadNeta,
+            utilidadNeta: income.utilidadNeta,
+
             margenBruto: base.costMetrics.margenBruto,
             margenNeto: base.costMetrics.margenNeto,
             totalActivo: base.balanceSheet.totalActivo,
@@ -478,7 +449,7 @@ window.CC_REPORTES = (function () {
             period: base.period,
             periodLabel: base.periodLabel,
             summary,
-            income: base.income,
+            income,
             balanceSheet: base.balanceSheet,
             costMetrics: base.costMetrics,
             indicators: base.indicators,
@@ -497,17 +468,17 @@ window.CC_REPORTES = (function () {
     return buildFallbackData(clientId, periodoId);
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: buildResumen guarda los campos nuevos
+     --------------------------------------------------------- */
   function buildResumen(data) {
     return {
       source: data.source,
       summary: data.summary,
       taxes: data.taxes,
       alerts: (data.alerts || []).map((alert) => ({
-        id: alert.id,
-        titulo: alert.titulo,
-        nivel: alert.nivel,
-        estado: alert.estado,
-        mensaje: alert.mensaje
+        id: alert.id, titulo: alert.titulo, nivel: alert.nivel,
+        estado: alert.estado, mensaje: alert.mensaje
       })),
       recommendations: data.recommendations || [],
       income: data.income
@@ -517,15 +488,21 @@ window.CC_REPORTES = (function () {
             totalIngresos: data.income.totalIngresos,
             costoNeto: data.income.costoNeto,
             utilidadBruta: data.income.utilidadBruta,
-            totalGastos: data.income.totalGastos,
+
+            gastosOperativos: (data.income.gastosOperativos || []).map((g) => ({
+              codigo: g.codigo, nombre: g.nombre, monto: g.monto
+            })),
+            totalGastosOperativos: data.income.totalGastosOperativos,
             utilidadOperativa: data.income.utilidadOperativa,
-            impuestosEstimados: data.income.impuestosEstimados,
+            depreciacion: data.income.depreciacion,
+            utilidadAntesImpuestos: data.income.utilidadAntesImpuestos,
+            gastosImpuestos: data.income.gastosImpuestos,
             utilidadNeta: data.income.utilidadNeta,
-            gastos: (data.income.gastos || []).map((g) => ({
-              codigo: g.codigo,
-              nombre: g.nombre,
-              monto: g.monto
-            }))
+
+            // Alias de compatibilidad
+            gastos: data.income.gastosOperativos,
+            totalGastos: data.income.totalGastosOperativos,
+            impuestosEstimados: data.income.gastosImpuestos
           }
         : null,
       balance: data.balanceSheet
@@ -551,26 +528,17 @@ window.CC_REPORTES = (function () {
 
   function sourceBadge(source) {
     const safe = String(source || "").toLowerCase();
-
-    if (safe === "contable") {
-      return '<span class="badge bg-success-subtle text-success">Contable</span>';
-    }
-
-    if (safe === "operativo") {
-      return '<span class="badge bg-warning-subtle text-warning">Operativo</span>';
-    }
-
+    if (safe === "contable") return '<span class="badge bg-success-subtle text-success">Contable</span>';
+    if (safe === "operativo") return '<span class="badge bg-warning-subtle text-warning">Operativo</span>';
     return '<span class="badge bg-secondary">Reporte</span>';
   }
 
   function alertLevelBadge(nivel) {
     const safe = String(nivel || "").toLowerCase();
-
     if (safe === "urgente") return '<span class="badge cc-status-vencida">Urgente</span>';
     if (safe === "vencida") return '<span class="badge cc-status-vencida">Vencida</span>';
     if (safe === "preventiva") return '<span class="badge cc-status-pendiente">Preventiva</span>';
     if (safe === "informativa") return '<span class="badge bg-info-subtle text-info">Informativa</span>';
-
     return `<span class="badge bg-secondary">${utils.escapeHTML(safe || "-")}</span>`;
   }
 
@@ -589,14 +557,11 @@ window.CC_REPORTES = (function () {
 
   function renderWarnings(data) {
     if (!data.warnings || !data.warnings.length) return "";
-
     return `
       <div class="alert alert-warning small">
         <strong>Advertencia del reporte:</strong>
         <ul class="mb-0 ps-3">
-          ${data.warnings
-            .map((warning) => `<li>${utils.escapeHTML(warning)}</li>`)
-            .join("")}
+          ${data.warnings.map((w) => `<li>${utils.escapeHTML(w)}</li>`).join("")}
         </ul>
       </div>
     `;
@@ -624,15 +589,20 @@ window.CC_REPORTES = (function () {
         por <strong>${utils.escapeHTML(money(s.utilidadNeta))}</strong>.
       </p>
       <p class="mb-0 small text-muted">
-        Este lenguaje está pensado para el microempresario. Los cifras provienen de transacciones,
+        Este lenguaje está pensado para el microempresario. Las cifras provienen de transacciones,
         asientos contables, ajustes e impuestos informativos registrados en el sistema.
       </p>
     `;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: Estado de Resultados alineado al Capítulo 5.9
+     --------------------------------------------------------- */
   function renderIncomeSection(data) {
     if (data.income) {
       const i = data.income;
+
+      const gastosOperativos = i.gastosOperativos || i.gastos || [];
 
       return `
         <div class="table-responsive">
@@ -644,24 +614,26 @@ window.CC_REPORTES = (function () {
               </tr>
             </thead>
             <tbody>
-              <tr><td>Ventas</td><td class="text-end">${utils.escapeHTML(money(i.ventas))}</td></tr>
+              <tr><td>Ingresos por servicios</td><td class="text-end">${utils.escapeHTML(money(i.ventas))}</td></tr>
               <tr><td>Otros ingresos</td><td class="text-end">${utils.escapeHTML(money(i.otrosIngresos))}</td></tr>
               <tr class="table-light fw-semibold"><td>Total ingresos</td><td class="text-end">${utils.escapeHTML(money(i.totalIngresos))}</td></tr>
-              <tr><td>Costo neto de ventas</td><td class="text-end">${utils.escapeHTML(money(i.costoNeto))}</td></tr>
+              <tr><td>Costo de servicios prestados</td><td class="text-end">${utils.escapeHTML(money(i.costoNeto))}</td></tr>
               <tr class="fw-semibold"><td>Utilidad bruta</td><td class="text-end">${utils.escapeHTML(money(i.utilidadBruta))}</td></tr>
-              ${(i.gastos || [])
-                .map(
-                  (g) => `
-                    <tr>
-                      <td>${utils.escapeHTML(g.nombre)}</td>
-                      <td class="text-end">${utils.escapeHTML(money(g.monto))}</td>
-                    </tr>
-                  `
-                )
-                .join("")}
-              <tr class="table-light fw-semibold"><td>Total gastos operativos</td><td class="text-end">${utils.escapeHTML(money(i.totalGastos))}</td></tr>
+
+              ${gastosOperativos.map((g) => `
+                <tr>
+                  <td>${utils.escapeHTML(g.nombre)}</td>
+                  <td class="text-end">${utils.escapeHTML(money(g.monto))}</td>
+                </tr>
+              `).join("")}
+
+              <tr class="table-light fw-semibold"><td>Total gastos operativos</td><td class="text-end">${utils.escapeHTML(money(i.totalGastosOperativos))}</td></tr>
               <tr class="fw-semibold"><td>Utilidad operativa</td><td class="text-end">${utils.escapeHTML(money(i.utilidadOperativa))}</td></tr>
-              <tr><td>(-) IT estimado informativo</td><td class="text-end">${utils.escapeHTML(money(i.impuestosEstimados))}</td></tr>
+
+              <tr><td>(-) Depreciación y amortización</td><td class="text-end">${utils.escapeHTML(money(i.depreciacion))}</td></tr>
+              <tr class="fw-semibold"><td>Utilidad antes de impuestos</td><td class="text-end">${utils.escapeHTML(money(i.utilidadAntesImpuestos))}</td></tr>
+
+              <tr><td>(-) Gastos por impuestos (IT)</td><td class="text-end">${utils.escapeHTML(money(i.gastosImpuestos))}</td></tr>
               <tr class="fw-bold table-success"><td>Utilidad neta del periodo</td><td class="text-end">${utils.escapeHTML(money(i.utilidadNeta))}</td></tr>
             </tbody>
           </table>
@@ -669,16 +641,14 @@ window.CC_REPORTES = (function () {
       `;
     }
 
+    // Fallback operativo
     const s = data.summary || {};
 
     return `
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead class="table-light">
-            <tr>
-              <th>Concepto</th>
-              <th class="text-end">Monto</th>
-            </tr>
+            <tr><th>Concepto</th><th class="text-end">Monto</th></tr>
           </thead>
           <tbody>
             <tr><td>Ventas</td><td class="text-end">${utils.escapeHTML(money(s.ventas))}</td></tr>
@@ -696,6 +666,9 @@ window.CC_REPORTES = (function () {
     `;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: texto de IT "ventas + otros ingresos"
+     --------------------------------------------------------- */
   function renderTaxesSection(data) {
     const taxes = data.taxes || {};
 
@@ -706,7 +679,7 @@ window.CC_REPORTES = (function () {
             <p class="small text-muted mb-1">IT estimado informativo</p>
             <strong class="fs-5 text-warning">${utils.escapeHTML(money(taxes.it))}</strong>
             <small class="d-block text-muted mt-1">
-              Calculado sobre ventas del periodo. No constituye declaración automática ante el SIN.
+              Calculado sobre ventas + otros ingresos del periodo. No constituye declaración automática ante el SIN.
             </small>
           </div>
         </div>
@@ -736,14 +709,12 @@ window.CC_REPORTES = (function () {
               <strong class="fs-5">${utils.escapeHTML(money(b.totalActivo))}</strong>
             </div>
           </div>
-
           <div class="col-12 col-md-4">
             <div class="border rounded p-3 h-100">
               <p class="small text-muted mb-1">Total pasivo</p>
               <strong class="fs-5">${utils.escapeHTML(money(b.totalPasivo))}</strong>
             </div>
           </div>
-
           <div class="col-12 col-md-4">
             <div class="border rounded p-3 h-100">
               <p class="small text-muted mb-1">Total patrimonio</p>
@@ -754,11 +725,9 @@ window.CC_REPORTES = (function () {
           <div class="col-12">
             <div class="alert ${b.balanced ? "alert-success" : "alert-danger"} small mb-0">
               <strong>Verificación:</strong>
-              ${
-                b.balanced
-                  ? "Activo = Pasivo + Patrimonio. El balance simplificado cuadra."
-                  : `El balance simplificado no cuadra. Diferencia: ${utils.escapeHTML(money(b.diferencia))}.`
-              }
+              ${b.balanced
+                ? "Activo = Pasivo + Patrimonio. El balance simplificado cuadra."
+                : `El balance simplificado no cuadra. Diferencia: ${utils.escapeHTML(money(b.diferencia))}.`}
             </div>
           </div>
         </div>
@@ -776,11 +745,7 @@ window.CC_REPORTES = (function () {
 
   function renderIndicatorsSection(data) {
     if (!data.indicators) {
-      return `
-        <p class="text-muted mb-0">
-          Indicadores no disponibles en modo operativo básico.
-        </p>
-      `;
+      return `<p class="text-muted mb-0">Indicadores no disponibles en modo operativo básico.</p>`;
     }
 
     const ind = data.indicators;
@@ -789,28 +754,16 @@ window.CC_REPORTES = (function () {
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead class="table-light">
-            <tr>
-              <th>Indicador</th>
-              <th>Valor</th>
-            </tr>
+            <tr><th>Indicador</th><th>Valor</th></tr>
           </thead>
           <tbody>
             <tr>
               <td>Liquidez corriente</td>
               <td>${utils.escapeHTML(ind.liquidezCorriente !== null ? `${ratioText(ind.liquidezCorriente)} veces` : "No calculable")}</td>
             </tr>
-            <tr>
-              <td>Endeudamiento</td>
-              <td>${utils.escapeHTML(percentText(ind.endeudamiento))}</td>
-            </tr>
-            <tr>
-              <td>ROE simplificado</td>
-              <td>${utils.escapeHTML(percentText(ind.roe))}</td>
-            </tr>
-            <tr>
-              <td>Margen neto</td>
-              <td>${utils.escapeHTML(percentText(data.summary ? data.summary.margenNeto : null))}</td>
-            </tr>
+            <tr><td>Endeudamiento</td><td>${utils.escapeHTML(percentText(ind.endeudamiento))}</td></tr>
+            <tr><td>ROE simplificado</td><td>${utils.escapeHTML(percentText(ind.roe))}</td></tr>
+            <tr><td>Margen neto</td><td>${utils.escapeHTML(percentText(data.summary ? data.summary.margenNeto : null))}</td></tr>
           </tbody>
         </table>
       </div>
@@ -819,11 +772,7 @@ window.CC_REPORTES = (function () {
 
   function renderBreakevenSection(data) {
     if (!data.breakeven) {
-      return `
-        <p class="text-muted mb-0">
-          Punto de equilibrio no disponible en modo operativo básico.
-        </p>
-      `;
+      return `<p class="text-muted mb-0">Punto de equilibrio no disponible en modo operativo básico.</p>`;
     }
 
     const b = data.breakeven;
@@ -842,19 +791,14 @@ window.CC_REPORTES = (function () {
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Punto de equilibrio contable</p>
             <strong class="fs-5">${utils.escapeHTML(money(b.peContable))}</strong>
-            <small class="d-block text-muted mt-1">
-              Basado en gastos operativos registrados.
-            </small>
+            <small class="d-block text-muted mt-1">Basado en gastos operativos registrados.</small>
           </div>
         </div>
-
         <div class="col-12 col-md-6">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Punto de equilibrio estimado</p>
             <strong class="fs-5">${b.peEstimado !== null ? utils.escapeHTML(money(b.peEstimado)) : "No registrado"}</strong>
-            <small class="d-block text-muted mt-1">
-              Basado en costos fijos mensuales estimados del cliente.
-            </small>
+            <small class="d-block text-muted mt-1">Basado en costos fijos mensuales estimados del cliente.</small>
           </div>
         </div>
       </div>
@@ -863,30 +807,22 @@ window.CC_REPORTES = (function () {
 
   function renderAlertsSection(alerts) {
     if (!alerts || !alerts.length) {
-      return `
-        <div class="alert alert-success small mb-0">
-          No hay alertas activas para este periodo.
-        </div>
-      `;
+      return `<div class="alert alert-success small mb-0">No hay alertas activas para este periodo.</div>`;
     }
 
     return `
       <div class="list-group list-group-flush">
-        ${alerts
-          .map(
-            (alert) => `
-              <div class="list-group-item">
-                <div class="d-flex w-100 justify-content-between align-items-start gap-2">
-                  <div>
-                    <h6 class="mb-1 fw-semibold">${utils.escapeHTML(alert.titulo || "Alerta")}</h6>
-                    <p class="mb-0 small text-muted">${utils.escapeHTML(alert.mensaje || "")}</p>
-                  </div>
-                  ${alertLevelBadge(alert.nivel)}
-                </div>
+        ${alerts.map((alert) => `
+          <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between align-items-start gap-2">
+              <div>
+                <h6 class="mb-1 fw-semibold">${utils.escapeHTML(alert.titulo || "Alerta")}</h6>
+                <p class="mb-0 small text-muted">${utils.escapeHTML(alert.mensaje || "")}</p>
               </div>
-            `
-          )
-          .join("")}
+              ${alertLevelBadge(alert.nivel)}
+            </div>
+          </div>
+        `).join("")}
       </div>
     `;
   }
@@ -895,12 +831,9 @@ window.CC_REPORTES = (function () {
     if (!recommendations || !recommendations.length) {
       return `<p class="text-muted mb-0">No hay recomendaciones automáticas.</p>`;
     }
-
     return `
       <ul class="mb-0 ps-3">
-        ${recommendations
-          .map((text) => `<li>${utils.escapeHTML(text)}</li>`)
-          .join("")}
+        ${recommendations.map((text) => `<li>${utils.escapeHTML(text)}</li>`).join("")}
       </ul>
     `;
   }
@@ -911,7 +844,9 @@ window.CC_REPORTES = (function () {
     if (!data || !data.ok) {
       elements.reporteContenido.innerHTML = `
         <p class="text-muted mb-0">
-          ${data && data.message ? utils.escapeHTML(data.message) : "Seleccione un cliente y un periodo, luego pulse “Generar reporte mensual”."}
+          ${data && data.message
+            ? utils.escapeHTML(data.message)
+            : "Seleccione un cliente y un periodo, luego pulse \"Generar reporte mensual\"."}
         </p>
       `;
       return;
@@ -983,12 +918,8 @@ window.CC_REPORTES = (function () {
           5. Indicadores y punto de equilibrio
         </h4>
         <div class="row g-3">
-          <div class="col-12 col-lg-6">
-            ${renderIndicatorsSection(data)}
-          </div>
-          <div class="col-12 col-lg-6">
-            ${renderBreakevenSection(data)}
-          </div>
+          <div class="col-12 col-lg-6">${renderIndicatorsSection(data)}</div>
+          <div class="col-12 col-lg-6">${renderBreakevenSection(data)}</div>
         </div>
       </section>
 
@@ -1017,12 +948,10 @@ window.CC_REPORTES = (function () {
 
   function reportStateBadge(estado) {
     const safe = String(estado || "").toLowerCase();
-
     if (safe === "generado") return '<span class="badge cc-status-activo">Generado</span>';
     if (safe === "borrador") return '<span class="badge cc-status-pendiente">Borrador</span>';
     if (safe === "enviado") return '<span class="badge bg-primary">Enviado</span>';
     if (safe === "anulado") return '<span class="badge cc-status-anulada">Anulado</span>';
-
     return `<span class="badge bg-secondary">${utils.escapeHTML(safe || "-")}</span>`;
   }
 
@@ -1034,9 +963,7 @@ window.CC_REPORTES = (function () {
       .sort((a, b) => {
         const dateA = String(a.fechaGeneracion || "");
         const dateB = String(b.fechaGeneracion || "");
-
         if (dateA !== dateB) return dateB.localeCompare(dateA);
-
         return String(b.id || "").localeCompare(String(a.id || ""));
       });
 
@@ -1175,10 +1102,7 @@ window.CC_REPORTES = (function () {
       income: resumen.income || null,
       balanceSheet: resumen.balance || null,
       costMetrics: summary
-        ? {
-            margenBruto: summary.margenBruto,
-            margenNeto: summary.margenNeto
-          }
+        ? { margenBruto: summary.margenBruto, margenNeto: summary.margenNeto }
         : null,
       indicators: resumen.indicators || null,
       breakeven: resumen.breakeven || null,
@@ -1193,17 +1117,38 @@ window.CC_REPORTES = (function () {
     setAlert(`Mostrando reporte guardado ${report.id}.`, "info");
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: al cambiar de cliente o periodo, limpiar la
+     vista previa para que no muestre el reporte anterior.
+     --------------------------------------------------------- */
   function bindEvents() {
     elements.repFiltroCliente?.addEventListener("change", () => {
       loadPeriods(elements.repFiltroCliente.value);
       renderPeriodState(null);
       setAlert("");
+      // Limpia la vista previa para que no muestre el reporte anterior
+      if (elements.reporteContenido) {
+        elements.reporteContenido.innerHTML = `
+          <p class="text-muted mb-0">
+            Seleccione un periodo y pulse "Generar reporte mensual".
+          </p>
+        `;
+      }
     });
 
     elements.repFiltroPeriodo?.addEventListener("change", () => {
       const period = getPeriod(elements.repFiltroPeriodo.value);
       renderPeriodState(period);
       setAlert("");
+      // Limpia la vista previa para que no muestre el reporte anterior
+      if (elements.reporteContenido) {
+        elements.reporteContenido.innerHTML = `
+          <p class="text-muted mb-0">
+            Periodo seleccionado: <strong>${utils.escapeHTML(periodLabel(period))}</strong>.
+            Pulse "Generar reporte mensual" para ver la vista previa.
+          </p>
+        `;
+      }
     });
 
     elements.btnGenerarReporte?.addEventListener("click", generateReport);
@@ -1212,15 +1157,15 @@ window.CC_REPORTES = (function () {
 
     elements.tablaReportes?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-action='ver']");
-
       if (!button) return;
-
       viewReport(button.dataset.id);
     });
   }
 
   function init() {
     if (!window.CC_AUTH || !window.CC_AUTH.isAuthenticated()) return;
+
+    if (!document.getElementById("repFiltroCliente")) return;
 
     cacheElements();
     loadClients();
@@ -1231,7 +1176,14 @@ window.CC_REPORTES = (function () {
 
     bindEvents();
     renderReportsTable();
-    renderPreview(null);
+
+    if (elements.reporteContenido) {
+      elements.reporteContenido.innerHTML = `
+        <p class="text-muted mb-0">
+          Seleccione un cliente y un periodo, luego pulse "Generar reporte mensual".
+        </p>
+      `;
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);
@@ -1240,6 +1192,7 @@ window.CC_REPORTES = (function () {
     init,
     generateReport,
     renderPreview,
-    renderReportsTable
+    renderReportsTable,
+    buildData  // ✅ expuesto para tests
   };
 })();

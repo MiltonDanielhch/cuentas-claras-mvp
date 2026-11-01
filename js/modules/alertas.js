@@ -1,7 +1,22 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de alertas tributarias y operativas
-   Fase 10
+   Fase 10.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - "Periodo sin cerrar" solo alerta para periodos recientes
+     (últimos 60 días) o el mes en curso. Ya no genera 10 urgentes.
+   - "Transacción sin documento" AGRUPA por periodo: en lugar de
+     crear 1 alerta por transacción, crea 1 alerta por periodo con
+     el conteo. Reduce de 54 a ~12 alertas.
+   - Excluye nóminas (sueldos, CNS, retiro) de "sin documento":
+     el sueldo no requiere factura.
+   - Excluye pagos de impuestos (IT, SIN) de "sin documento":
+     se respaldan con formulario 410.
+   - Mejor clasificación de nivel: urgente solo cuando el periodo
+     está cerrado o a punto de cerrarse; preventiva el resto.
+   - findExisting() compara también registroId normalizado para
+     evitar duplicados.
    ========================================================= */
 
 window.CC_ALERTAS = (function () {
@@ -11,22 +26,11 @@ window.CC_ALERTAS = (function () {
   const bitacora = window.CC_BITACORA;
 
   const monthNames = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre"
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
   const elements = {};
-
   let alertasEventsBound = false;
   let dashboardEventsBound = false;
 
@@ -69,13 +73,11 @@ window.CC_ALERTAS = (function () {
 
   function setAlert(message, type = "info") {
     if (!elements.alertasAlerta) return;
-
     if (!message) {
       elements.alertasAlerta.classList.add("d-none");
       elements.alertasAlerta.textContent = "";
       return;
     }
-
     elements.alertasAlerta.className = `alert alert-${type} mb-0 small`;
     elements.alertasAlerta.textContent = message;
     elements.alertasAlerta.classList.remove("d-none");
@@ -91,24 +93,20 @@ window.CC_ALERTAS = (function () {
 
   function populateSelect(selectEl, options, placeholder = "") {
     if (!selectEl) return;
-
     const prev = selectEl.value;
     selectEl.innerHTML = "";
-
     if (placeholder !== null) {
       const opt = document.createElement("option");
       opt.value = "";
       opt.textContent = placeholder;
       selectEl.appendChild(opt);
     }
-
     options.forEach((o) => {
       const opt = document.createElement("option");
       opt.value = o.value;
       opt.textContent = o.label;
       selectEl.appendChild(opt);
     });
-
     if (prev) selectEl.value = prev;
   }
 
@@ -123,11 +121,7 @@ window.CC_ALERTAS = (function () {
   function daysFromToday(dateISO) {
     const today = parseDate(todayISO());
     const date = parseDate(dateISO);
-
-    if (Number.isNaN(today.getTime()) || Number.isNaN(date.getTime())) {
-      return 9999;
-    }
-
+    if (Number.isNaN(today.getTime()) || Number.isNaN(date.getTime())) return 9999;
     return Math.round((date.getTime() - today.getTime()) / 86400000);
   }
 
@@ -165,15 +159,14 @@ window.CC_ALERTAS = (function () {
 
   function findExisting(type, clienteId, periodoId, registroId) {
     const reg = registroId ? String(registroId) : "";
-
     return getAlerts().some((alert) => {
-      const sameType = alert.tipo === type;
-      const sameClient = alert.clienteId === clienteId;
-      const samePeriod = String(alert.periodoId || "") === String(periodoId || "");
-      const sameRecord = String(alert.registroId || "") === reg;
-      const isActive = activeStates().includes(alert.estado);
-
-      return sameType && sameClient && samePeriod && sameRecord && isActive;
+      return (
+        alert.tipo === type &&
+        alert.clienteId === clienteId &&
+        String(alert.periodoId || "") === String(periodoId || "") &&
+        String(alert.registroId || "") === reg &&
+        activeStates().includes(alert.estado)
+      );
     });
   }
 
@@ -202,33 +195,81 @@ window.CC_ALERTAS = (function () {
     );
 
     if (bitacora) {
-      bitacora.log(
-        "generar_alerta",
-        "alerts",
-        alert.id,
-        `${data.tipo}: ${data.titulo}`
-      );
+      bitacora.log("generar_alerta", "alerts", alert.id, `${data.tipo}: ${data.titulo}`);
     }
 
     return alert;
   }
 
-  function isCapitalTransaction(transaction) {
-    const text = [
-      transaction.cuenta,
-      transaction.tercero,
-      transaction.observacion
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+  /* ---------------------------------------------------------
+     ✅ NUEVO: helpers de exclusión
+     --------------------------------------------------------- */
 
+  function isCapitalTransaction(transaction) {
+    const text = [transaction.cuenta, transaction.tercero, transaction.observacion]
+      .filter(Boolean).join(" ").toLowerCase();
+    return text.includes("capital") || text.includes("aporte") || text.includes("propietario");
+  }
+
+  // ✅ NUEVO: excluye nóminas (sueldos, CNS, retiro)
+  function isSalaryTransaction(transaction) {
+    const text = [transaction.cuenta, transaction.tercero, transaction.observacion]
+      .filter(Boolean).join(" ").toLowerCase();
     return (
-      text.includes("capital") ||
-      text.includes("aporte") ||
-      text.includes("propietario")
+      text.includes("sueldo") ||
+      text.includes("salario") ||
+      text.includes("nómina") ||
+      text.includes("nomina") ||
+      text.includes("retiro remunerado") ||
+      text.includes("cns") ||
+      text.includes("cargas sociales") ||
+      text.includes("beneficios sociales") ||
+      text.includes("provisión") ||
+      text.includes("provision")
     );
   }
+
+  // ✅ NUEVO: excluye pagos de impuestos (IT, SIN)
+  function isTaxPayment(transaction) {
+    const text = [transaction.cuenta, transaction.tercero, transaction.observacion]
+      .filter(Boolean).join(" ").toLowerCase();
+    return (
+      text.includes("sin ") ||
+      text.includes("it referencial") ||
+      text.includes("impuesto") ||
+      text.includes("formulario 410")
+    );
+  }
+
+  /* ---------------------------------------------------------
+     ✅ NUEVO: regla de periodo sin cerrar
+     Solo alerta para:
+     - Periodos en revisión (siempre)
+     - Periodos que terminaron en los últimos 60 días (urgente)
+     - Periodo actual que termina en los próximos 15 días (preventiva)
+     --------------------------------------------------------- */
+
+  function shouldAlertPeriod(period) {
+    if (period.estado === "cerrado") return { should: false };
+    if (period.estado === "en_revision") return { should: true, nivel: "preventiva", motivo: "en revisión" };
+
+    const end = periodEndISO(period.mes, period.anio);
+    const diff = daysFromToday(end);
+
+    if (diff < 0 && diff >= -60) {
+      return { should: true, nivel: "urgente", motivo: "terminó sin cerrar" };
+    }
+
+    if (diff >= 0 && diff <= 15) {
+      return { should: true, nivel: "preventiva", motivo: "próximo a cerrar" };
+    }
+
+    return { should: false };
+  }
+
+  /* ---------------------------------------------------------
+     Generadores de alertas
+     --------------------------------------------------------- */
 
   function generateVencimientosTributarios() {
     const created = [];
@@ -238,20 +279,14 @@ window.CC_ALERTAS = (function () {
       if (!obl.fechaVencimiento) return;
 
       const diff = daysFromToday(obl.fechaVencimiento);
-
       if (diff > (Number(cfg.alertDaysBefore) || 7)) return;
 
       let nivel = "informativa";
       let estado = "pendiente";
 
-      if (diff < 0) {
-        nivel = "vencida";
-        estado = "vencida";
-      } else if (diff <= (Number(cfg.urgentDaysBefore) || 3)) {
-        nivel = "urgente";
-      } else if (diff <= (Number(cfg.alertDaysBefore) || 7)) {
-        nivel = "preventiva";
-      }
+      if (diff < 0) { nivel = "vencida"; estado = "vencida"; }
+      else if (diff <= (Number(cfg.urgentDaysBefore) || 3)) { nivel = "urgente"; }
+      else if (diff <= (Number(cfg.alertDaysBefore) || 7)) { nivel = "preventiva"; }
 
       const client = getClient(obl.clienteId);
       const period = getPeriod(obl.periodoId);
@@ -287,7 +322,6 @@ window.CC_ALERTAS = (function () {
 
       const period = getPeriod(doc.periodoId);
       const client = getClient(doc.clienteId);
-
       const nivel = period && period.estado === "cerrado" ? "urgente" : "preventiva";
 
       const alert = createAlert({
@@ -311,30 +345,16 @@ window.CC_ALERTAS = (function () {
     return created;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: solo alerta para periodos recientes
+     --------------------------------------------------------- */
+
   function generatePeriodosSinCerrar() {
     const created = [];
 
     storage.list("periods").forEach((period) => {
-      if (period.estado === "cerrado") return;
-
-      const end = periodEndISO(period.mes, period.anio);
-      const diff = daysFromToday(end);
-
-      const shouldAlert = period.estado === "en_revision" || diff <= (Number(cfg.alertDaysBefore) || 7);
-
-      if (!shouldAlert) return;
-
-      let nivel = "informativa";
-
-      if (diff < 0) {
-        nivel = "urgente";
-      } else if (diff <= (Number(cfg.urgentDaysBefore) || 3)) {
-        nivel = "urgente";
-      } else if (period.estado === "en_revision") {
-        nivel = "preventiva";
-      } else {
-        nivel = "preventiva";
-      }
+      const rule = shouldAlertPeriod(period);
+      if (!rule.should) return;
 
       const client = getClient(period.clienteId);
 
@@ -344,11 +364,11 @@ window.CC_ALERTAS = (function () {
         registroId: null,
         entidad: "periods",
         tipo: "periodo_sin_cerrar",
-        nivel,
+        nivel: rule.nivel,
         titulo: `Periodo sin cerrar ${periodLabel(period)}`,
         mensaje:
           `El periodo ${periodLabel(period)} de ${client ? client.nombreComercial : "cliente"} ` +
-          `está en estado ${period.estado}. Revise documentos, transacciones, asientos y ajustes ` +
+          `está ${rule.motivo}. Revise documentos, transacciones, asientos y ajustes ` +
           `antes de cerrar contablemente.`
       });
 
@@ -358,39 +378,54 @@ window.CC_ALERTAS = (function () {
     return created;
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: agrupa por periodo en lugar de por transacción
+     Reduce de 54 a ~12 alertas.
+     --------------------------------------------------------- */
+
   function generateTransaccionesSinDocumento() {
-    const created = [];
+    const byPeriod = {};
 
     storage.list("transactions").forEach((trx) => {
       if (trx.estado !== "activa") return;
       if (trx.documentoId) return;
       if (isCapitalTransaction(trx)) return;
+      if (isSalaryTransaction(trx)) return;
+      if (isTaxPayment(trx)) return;
 
-      const period = getPeriod(trx.periodoId);
-      const client = getClient(trx.clienteId);
+      const key = `${trx.clienteId}|${trx.periodoId}`;
+      if (!byPeriod[key]) byPeriod[key] = { clienteId: trx.clienteId, periodoId: trx.periodoId, transacciones: [] };
+      byPeriod[key].transacciones.push(trx);
+    });
+
+    const created = [];
+
+    Object.values(byPeriod).forEach(({ clienteId, periodoId, transacciones }) => {
+      const period = getPeriod(periodoId);
+      const client = getClient(clienteId);
+      const total = transacciones.reduce((sum, t) => sum + (Number(t.monto) || 0), 0);
+
+      // Nivel: urgente si el periodo está cerrado o a punto de cerrarse
       const end = period ? periodEndISO(period.mes, period.anio) : todayISO();
       const diff = daysFromToday(end);
-
       let nivel = "preventiva";
-
-      if (period && period.estado === "cerrado") {
-        nivel = "urgente";
-      } else if (diff <= (Number(cfg.urgentDaysBefore) || 3)) {
-        nivel = "urgente";
-      }
+      if (period && period.estado === "cerrado") nivel = "urgente";
+      else if (diff >= -3 && diff <= 3) nivel = "urgente";
 
       const alert = createAlert({
-        clienteId: trx.clienteId,
-        periodoId: trx.periodoId,
-        registroId: trx.id,
+        clienteId,
+        periodoId,
+        registroId: `LOTE-${periodoId}`, // ✅ un solo registro por periodo
         entidad: "transactions",
         tipo: "transaccion_sin_documento",
         nivel,
-        titulo: `Transacción sin documento ${trx.id}`,
+        titulo: `${transacciones.length} transacciones sin documento`,
         mensaje:
-          `La transacción ${trx.id} de tipo ${trx.tipo} por ${utils.formatMoney(trx.monto)} ` +
-          `de ${client ? client.nombreComercial : "cliente"} no tiene documento de respaldo. ` +
-          `Tercero: ${trx.tercero || "sin especificar"}.`
+          `El periodo ${period ? periodLabel(period) : "seleccionado"} de ${client ? client.nombreComercial : "cliente"} ` +
+          `tiene ${transacciones.length} transacciones sin documento de respaldo ` +
+          `por un total de ${utils.formatMoney(total)}. ` +
+          `IDs: ${transacciones.slice(0, 3).map((t) => t.id).join(", ")}` +
+          (transacciones.length > 3 ? `... (+${transacciones.length - 3} más)` : "") + "."
       });
 
       if (alert) created.push(alert);
@@ -407,13 +442,11 @@ window.CC_ALERTAS = (function () {
       if (trx.journalEntryId) return;
 
       const period = getPeriod(trx.periodoId);
-
       if (!period || period.estado === "cerrado") return;
 
       const client = getClient(trx.clienteId);
       const end = periodEndISO(period.mes, period.anio);
       const diff = daysFromToday(end);
-
       const nivel = diff <= (Number(cfg.urgentDaysBefore) || 3) ? "urgente" : "preventiva";
 
       const alert = createAlert({
@@ -487,7 +520,6 @@ window.CC_ALERTAS = (function () {
   function generateBalanzaDescuadrada() {
     const created = [];
     const motor = getMotor();
-
     if (!motor) return created;
 
     motor.ensureAccounts();
@@ -497,7 +529,6 @@ window.CC_ALERTAS = (function () {
       .filter((period) => period.estado !== "cerrado");
 
     const byClient = {};
-
     periods.forEach((period) => {
       if (!byClient[period.clienteId]) byClient[period.clienteId] = [];
       byClient[period.clienteId].push(period);
@@ -509,7 +540,6 @@ window.CC_ALERTAS = (function () {
 
       clientPeriods.forEach((period) => {
         const key = motor.periodKey(period);
-
         const balances = motor.getTrialBalance(ctx, accountsMap, key, {
           includeAdjustments: true,
           includeClosing: false
@@ -518,13 +548,11 @@ window.CC_ALERTAS = (function () {
         if (balances.movementsBalanced && balances.balancesBalanced) return;
 
         const problems = [];
-
         if (!balances.movementsBalanced) {
           problems.push(
             `Movimientos: débitos ${utils.formatMoney(balances.totals.debitos)} vs créditos ${utils.formatMoney(balances.totals.creditos)}.`
           );
         }
-
         if (!balances.balancesBalanced) {
           problems.push(
             `Saldos: deudor ${utils.formatMoney(balances.totals.saldoDeudor)} vs acreedor ${utils.formatMoney(balances.totals.saldoAcreedor)}.`
@@ -576,13 +604,16 @@ window.CC_ALERTAS = (function () {
         utils.showToast(message, "info");
         setAlert(message, "info");
       }
-
       render();
       renderDashboard();
     }
 
     return created;
   }
+
+  /* ---------------------------------------------------------
+     Resto del módulo: filtros, render, acciones (sin cambios)
+     --------------------------------------------------------- */
 
   function loadClients() {
     const clients = storage
@@ -605,7 +636,6 @@ window.CC_ALERTAS = (function () {
     if (!elements.alertasFiltroPeriodo) return;
 
     let periods = storage.list("periods");
-
     if (clientId) {
       periods = periods.filter((period) => period.clienteId === clientId);
     }
@@ -630,40 +660,27 @@ window.CC_ALERTAS = (function () {
   function populateStaticFilters() {
     populateSelect(
       elements.alertasFiltroTipo,
-      (cfg.alertTypes || []).map((item) => ({
-        value: item.value,
-        label: item.label
-      })),
+      (cfg.alertTypes || []).map((item) => ({ value: item.value, label: item.label })),
       "Todos"
     );
-
     populateSelect(
       elements.alertasFiltroNivel,
-      (cfg.alertLevels || []).map((item) => ({
-        value: item.value,
-        label: item.label
-      })),
+      (cfg.alertLevels || []).map((item) => ({ value: item.value, label: item.label })),
       "Todos"
     );
-
     populateSelect(
       elements.alertasFiltroEstado,
-      (cfg.alertStates || []).map((item) => ({
-        value: item.value,
-        label: item.label
-      })),
+      (cfg.alertStates || []).map((item) => ({ value: item.value, label: item.label })),
       "Todos"
     );
   }
 
   function nivelWeight(nivel) {
     const safe = String(nivel || "").toLowerCase();
-
     if (safe === "urgente") return 1;
     if (safe === "vencida") return 2;
     if (safe === "preventiva") return 3;
     if (safe === "informativa") return 4;
-
     return 9;
   }
 
@@ -686,7 +703,6 @@ window.CC_ALERTAS = (function () {
     if (search) {
       data = data.filter((item) => {
         const period = getPeriod(item.periodoId);
-
         const haystack = [
           item.id,
           getClientName(item.clienteId),
@@ -699,11 +715,7 @@ window.CC_ALERTAS = (function () {
           item.registroId,
           item.obligacionId,
           item.asientoId
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-
+        ].filter(Boolean).join(" ").toLowerCase();
         return haystack.includes(search);
       });
     }
@@ -711,14 +723,10 @@ window.CC_ALERTAS = (function () {
     data.sort((a, b) => {
       const wa = nivelWeight(a.nivel);
       const wb = nivelWeight(b.nivel);
-
       if (wa !== wb) return wa - wb;
-
       const dateA = String(a.fechaAlerta || "");
       const dateB = String(b.fechaAlerta || "");
-
       if (dateA !== dateB) return dateB.localeCompare(dateA);
-
       return String(b.id || "").localeCompare(String(a.id || ""));
     });
 
@@ -747,23 +755,19 @@ window.CC_ALERTAS = (function () {
 
   function nivelBadge(nivel) {
     const safe = String(nivel || "").toLowerCase();
-
     if (safe === "urgente") return '<span class="badge cc-status-vencida">Urgente</span>';
     if (safe === "vencida") return '<span class="badge cc-status-vencida">Vencida</span>';
     if (safe === "preventiva") return '<span class="badge cc-status-pendiente">Preventiva</span>';
     if (safe === "informativa") return '<span class="badge bg-info-subtle text-info">Informativa</span>';
-
     return `<span class="badge bg-secondary">${utils.escapeHTML(safe || "-")}</span>`;
   }
 
   function estadoBadge(estado) {
     const safe = String(estado || "").toLowerCase();
-
     if (safe === "pendiente") return '<span class="badge cc-status-pendiente">Pendiente</span>';
     if (safe === "vista") return '<span class="badge bg-info-subtle text-info">Vista</span>';
     if (safe === "resuelta") return '<span class="badge cc-status-activo">Resuelta</span>';
     if (safe === "vencida") return '<span class="badge cc-status-vencida">Vencida</span>';
-
     return `<span class="badge bg-secondary">${utils.escapeHTML(safe || "-")}</span>`;
   }
 
@@ -797,27 +801,11 @@ window.CC_ALERTAS = (function () {
         const canResolve = alert.estado !== "resuelta";
 
         const viewButton = canView
-          ? `<button
-                class="btn btn-outline-info"
-                type="button"
-                data-action="vista"
-                data-id="${utils.escapeHTML(alert.id)}"
-                title="Marcar como vista"
-              >
-                <i class="bi bi-eye"></i>
-              </button>`
+          ? `<button class="btn btn-outline-info" type="button" data-action="vista" data-id="${utils.escapeHTML(alert.id)}" title="Marcar como vista"><i class="bi bi-eye"></i></button>`
           : "";
 
         const resolveButton = canResolve
-          ? `<button
-                class="btn btn-outline-success"
-                type="button"
-                data-action="resolver"
-                data-id="${utils.escapeHTML(alert.id)}"
-                title="Marcar como resuelta"
-              >
-                <i class="bi bi-check2-circle"></i>
-              </button>`
+          ? `<button class="btn btn-outline-success" type="button" data-action="resolver" data-id="${utils.escapeHTML(alert.id)}" title="Marcar como resuelta"><i class="bi bi-check2-circle"></i></button>`
           : "";
 
         return `
@@ -836,35 +824,11 @@ window.CC_ALERTAS = (function () {
             <td>${estadoBadge(alert.estado)}</td>
             <td class="text-end">
               <div class="btn-group btn-group-sm" role="group">
-                <button
-                  class="btn btn-outline-secondary"
-                  type="button"
-                  data-action="ver"
-                  data-id="${utils.escapeHTML(alert.id)}"
-                  title="Ver detalle"
-                >
-                  <i class="bi bi-card-text"></i>
-                </button>
+                <button class="btn btn-outline-secondary" type="button" data-action="ver" data-id="${utils.escapeHTML(alert.id)}" title="Ver detalle"><i class="bi bi-card-text"></i></button>
                 ${viewButton}
                 ${resolveButton}
-                <button
-                  class="btn btn-outline-primary"
-                  type="button"
-                  data-action="copiar"
-                  data-id="${utils.escapeHTML(alert.id)}"
-                  title="Copiar mensaje WhatsApp"
-                >
-                  <i class="bi bi-clipboard"></i>
-                </button>
-                <button
-                  class="btn btn-outline-success"
-                  type="button"
-                  data-action="whatsapp"
-                  data-id="${utils.escapeHTML(alert.id)}"
-                  title="Abrir WhatsApp"
-                >
-                  <i class="bi bi-whatsapp"></i>
-                </button>
+                <button class="btn btn-outline-primary" type="button" data-action="copiar" data-id="${utils.escapeHTML(alert.id)}" title="Copiar mensaje WhatsApp"><i class="bi bi-clipboard"></i></button>
+                <button class="btn btn-outline-success" type="button" data-action="whatsapp" data-id="${utils.escapeHTML(alert.id)}" title="Abrir WhatsApp"><i class="bi bi-whatsapp"></i></button>
               </div>
             </td>
           </tr>
@@ -880,13 +844,9 @@ window.CC_ALERTAS = (function () {
 
   function sanitizePhone(value) {
     const digits = String(value || "").replace(/\D/g, "");
-
     if (!digits) return "";
-
     if (digits.startsWith("591")) return digits;
-
     if (digits.length >= 7) return `591${digits}`;
-
     return "";
   }
 
@@ -923,74 +883,59 @@ window.CC_ALERTAS = (function () {
       textarea.style.left = "-9999px";
       document.body.appendChild(textarea);
       textarea.select();
-
       try {
         document.execCommand("copy");
         utils.showToast("Mensaje copiado.", "success");
       } catch (err) {
         utils.showToast("No se pudo copiar el mensaje.", "danger");
       }
-
       document.body.removeChild(textarea);
     }
   }
 
   function copyAlert(id) {
     const alert = storage.get("alerts", id);
-
     if (!alert) {
       utils.showToast("Alerta no encontrada.", "danger");
       return;
     }
-
     copyText(buildWhatsAppMessage(alert));
   }
 
   function openWhatsApp(id) {
     const alert = storage.get("alerts", id);
-
     if (!alert) {
       utils.showToast("Alerta no encontrada.", "danger");
       return;
     }
-
     const client = getClient(alert.clienteId);
     const phone = getClientPhone(client);
-
     if (!phone) {
       utils.showToast("El cliente no tiene teléfono o WhatsApp registrado.", "warning");
       return;
     }
-
     const message = encodeURIComponent(buildWhatsAppMessage(alert));
     const url = `https://wa.me/${phone}?text=${message}`;
-
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
   function setState(id, estado) {
     const alert = storage.get("alerts", id);
-
     if (!alert) {
       utils.showToast("Alerta no encontrada.", "danger");
       return;
     }
-
     if (alert.estado === estado) {
       utils.showToast("La alerta ya está en ese estado.", "info");
       return;
     }
-
     if (estado === "resuelta") {
       const ok = utils.confirmDialog(
         `¿Marcar como resuelta la alerta ${alert.id}? Esta acción quedará registrada en bitácora.`
       );
-
       if (!ok) return;
     }
-
     storage.update("alerts", id, { estado });
-
     if (bitacora) {
       bitacora.log(
         estado === "vista" ? "marcar_alerta_vista" : "resolver_alerta",
@@ -999,7 +944,6 @@ window.CC_ALERTAS = (function () {
         `Alerta ${id} marcada como ${estado}`
       );
     }
-
     utils.showToast(`Alerta marcada como ${estado}.`, "success");
     render();
     renderDashboard();
@@ -1007,7 +951,6 @@ window.CC_ALERTAS = (function () {
 
   function viewAlert(id) {
     const alert = storage.get("alerts", id);
-
     if (!alert) {
       utils.showToast("Alerta no encontrada.", "danger");
       return;
@@ -1024,7 +967,6 @@ window.CC_ALERTAS = (function () {
             ${utils.escapeHTML(alert.id)} · ${utils.escapeHTML(getClientName(alert.clienteId))}
           </p>
         </div>
-
         <div class="col-12 col-md-6">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Cliente</p>
@@ -1032,7 +974,6 @@ window.CC_ALERTAS = (function () {
             <small class="d-block text-muted">${utils.escapeHTML(alert.clienteId)}</small>
           </div>
         </div>
-
         <div class="col-12 col-md-6">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Periodo</p>
@@ -1040,35 +981,30 @@ window.CC_ALERTAS = (function () {
             <small class="d-block text-muted">${utils.escapeHTML(alert.periodoId || "-")}</small>
           </div>
         </div>
-
         <div class="col-12 col-md-4">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Tipo</p>
             <strong>${utils.escapeHTML(tipoLabel(alert.tipo))}</strong>
           </div>
         </div>
-
         <div class="col-12 col-md-4">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Nivel</p>
             ${nivelBadge(alert.nivel)}
           </div>
         </div>
-
         <div class="col-12 col-md-4">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Estado</p>
             ${estadoBadge(alert.estado)}
           </div>
         </div>
-
         <div class="col-12">
           <div class="border rounded p-3">
             <p class="small text-muted mb-1">Mensaje</p>
             <p class="mb-0">${utils.escapeHTML(alert.mensaje || "-")}</p>
           </div>
         </div>
-
         <div class="col-12 col-md-6">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Referencia interna</p>
@@ -1076,14 +1012,12 @@ window.CC_ALERTAS = (function () {
             <small class="d-block text-muted">Entidad: ${utils.escapeHTML(alert.entidad || "-")}</small>
           </div>
         </div>
-
         <div class="col-12 col-md-6">
           <div class="border rounded p-3 h-100">
             <p class="small text-muted mb-1">Fecha de alerta</p>
             <strong>${utils.escapeHTML(utils.formatDate(alert.fechaAlerta))}</strong>
           </div>
         </div>
-
         <div class="col-12">
           <div class="alert alert-info mb-0 small">
             <strong>Acción sugerida:</strong>
@@ -1092,7 +1026,6 @@ window.CC_ALERTAS = (function () {
         </div>
       </div>
     `;
-
     showDetalleModal();
   }
 
@@ -1119,7 +1052,6 @@ window.CC_ALERTAS = (function () {
       if (elements.alertasFiltroTipo) elements.alertasFiltroTipo.value = "";
       if (elements.alertasFiltroNivel) elements.alertasFiltroNivel.value = "";
       if (elements.alertasFiltroEstado) elements.alertasFiltroEstado.value = "";
-
       loadPeriodOptions("");
       setAlert("");
       render();
@@ -1127,12 +1059,9 @@ window.CC_ALERTAS = (function () {
 
     elements.tablaAlertas?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-action]");
-
       if (!button) return;
-
       const action = button.dataset.action;
       const id = button.dataset.id;
-
       if (action === "ver") viewAlert(id);
       if (action === "vista") setState(id, "vista");
       if (action === "resolver") setState(id, "resuelta");
@@ -1145,25 +1074,29 @@ window.CC_ALERTAS = (function () {
 
   function renderDashboard() {
     const container = elements.dashboardAlertas;
-
     if (!container) return;
 
-    const alerts = getAlerts()
-      .filter((alert) => ["pendiente", "vencida", "vista"].includes(alert.estado))
+    const allAlerts = getAlerts().filter((alert) => ["pendiente", "vencida", "vista"].includes(alert.estado));
+
+    const alerts = allAlerts
       .sort((a, b) => {
         const wa = nivelWeight(a.nivel);
         const wb = nivelWeight(b.nivel);
-
         if (wa !== wb) return wa - wb;
-
         const dateA = String(a.fechaAlerta || "");
         const dateB = String(b.fechaAlerta || "");
-
         if (dateA !== dateB) return dateB.localeCompare(dateA);
-
         return String(b.id || "").localeCompare(String(a.id || ""));
       })
       .slice(0, 5);
+
+    // ✅ Muestra el total real en el encabezado
+    const totalHeader = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted">Mostrando 5 de ${allAlerts.length} alertas activas</small>
+        ${allAlerts.length > 5 ? '<a href="./alertas.html" class="btn btn-outline-secondary btn-sm">Ver todas</a>' : ''}
+      </div>
+    `;
 
     if (!alerts.length) {
       container.innerHTML = `
@@ -1176,56 +1109,44 @@ window.CC_ALERTAS = (function () {
     }
 
     container.innerHTML = `
+      ${totalHeader}
       <div class="list-group list-group-flush">
-        ${alerts
-          .map((alert) => {
-            const period = getPeriod(alert.periodoId);
-
-            return `
-              <div class="list-group-item">
-                <div class="d-flex w-100 justify-content-between align-items-start gap-2">
-                  <div>
-                    <h6 class="mb-1 fw-semibold">${utils.escapeHTML(alert.titulo || "Alerta")}</h6>
-                    <p class="mb-1 small text-muted">
-                      ${utils.escapeHTML(getClientName(alert.clienteId))} ·
-                      ${utils.escapeHTML(period ? periodLabel(period) : "Sin periodo")}
-                    </p>
-                    <p class="mb-0 small">${utils.escapeHTML(truncate(alert.mensaje, 140))}</p>
-                  </div>
-                  <div class="text-end">
-                    ${nivelBadge(alert.nivel)}
-                    <div class="mt-1">${estadoBadge(alert.estado)}</div>
-                  </div>
+        ${alerts.map((alert) => {
+          const period = getPeriod(alert.periodoId);
+          return `
+            <div class="list-group-item">
+              <div class="d-flex w-100 justify-content-between align-items-start gap-2">
+                <div>
+                  <h6 class="mb-1 fw-semibold">${utils.escapeHTML(alert.titulo || "Alerta")}</h6>
+                  <p class="mb-1 small text-muted">
+                    ${utils.escapeHTML(getClientName(alert.clienteId))} ·
+                    ${utils.escapeHTML(period ? periodLabel(period) : "Sin periodo")}
+                  </p>
+                  <p class="mb-0 small">${utils.escapeHTML(truncate(alert.mensaje, 140))}</p>
+                </div>
+                <div class="text-end">
+                  ${nivelBadge(alert.nivel)}
+                  <div class="mt-1">${estadoBadge(alert.estado)}</div>
                 </div>
               </div>
-            `;
-          })
-          .join("")}
-      </div>
-
-      <div class="mt-3 d-flex justify-content-end">
-        <a href="./alertas.html" class="btn btn-outline-secondary btn-sm">
-          Ver todas las alertas
-        </a>
+            </div>
+          `;
+        }).join("")}
       </div>
     `;
   }
 
   function bindDashboardEvents() {
     if (dashboardEventsBound) return;
-
     elements.btnDashboardGenerarAlertas?.addEventListener("click", () => {
       generateAll(true);
     });
-
     dashboardEventsBound = true;
   }
 
   function init() {
     if (!window.CC_AUTH || !window.CC_AUTH.isAuthenticated()) return;
-
     cacheElements();
-
     if (isAlertasPage()) {
       loadClients();
       loadPeriodOptions("");
@@ -1233,7 +1154,6 @@ window.CC_ALERTAS = (function () {
       bindAlertasEvents();
       render();
     }
-
     bindDashboardEvents();
     renderDashboard();
   }

@@ -1,7 +1,18 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de respaldo, importación, restablecimiento y bitácora
-   Fase 12
+   Fase 12.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - loadSeedForce() intenta CC_SEED_EMPRENDIMIENTO.load() primero,
+     para garantizar que el cliente CLI-0004 (Cuentas Claras) se
+     cargue aunque el HTML no incluya seed-emprendimiento.js de
+     forma explícita.
+   - resetSystem() ofrece recargar la semilla automáticamente
+     tras el reset (pregunta al usuario).
+   - validatePayload() advierte correctamente que las cuentas
+     nuevas se recrean automáticamente vía ensureAccounts().
+   - Se agrega validación de cuentas faltantes (informativa).
    ========================================================= */
 
 window.CC_RESPALDO = (function () {
@@ -31,6 +42,18 @@ window.CC_RESPALDO = (function () {
     reports: "Reportes",
     logs: "Bitácora"
   };
+
+  // ✅ NUEVO: cuentas que deben existir en el plan (para validación informativa)
+  const CUENTAS_CLAVE = [
+    "1.2.01", "1.2.02", "1.2.03", "1.2.04", "1.2.05", "1.2.06",
+    "2.1.04",
+    "3.1.01", "3.1.02", "3.1.03",
+    "4.1.01", "4.1.02",
+    "5.1.01",
+    "6.1.01", "6.1.02", "6.1.03", "6.1.04", "6.1.05",
+    "6.2.01", "6.2.02", "6.2.03",
+    "6.4.01"
+  ];
 
   function cacheElements() {
     elements.statVersion = document.getElementById("statVersion");
@@ -90,7 +113,6 @@ window.CC_RESPALDO = (function () {
   function estimateLocalStorageUsage() {
     let total = 0;
     const keys = Object.keys(localStorage);
-
     keys.forEach((key) => {
       if (!key.startsWith(cfg.storagePrefix)) return;
       try {
@@ -100,8 +122,7 @@ window.CC_RESPALDO = (function () {
         // ignorar claves ilegibles
       }
     });
-
-    return total * 2; // aproximación UTF-16
+    return total * 2;
   }
 
   function renderStats() {
@@ -192,14 +213,12 @@ window.CC_RESPALDO = (function () {
       textarea.style.left = "-9999px";
       document.body.appendChild(textarea);
       textarea.select();
-
       let ok = false;
       try {
         ok = document.execCommand("copy");
       } catch (err) {
         ok = false;
       }
-
       document.body.removeChild(textarea);
       return ok;
     }
@@ -310,8 +329,19 @@ window.CC_RESPALDO = (function () {
       info.counts[name] = payload.data[name].length;
     });
 
+    // ✅ CORREGIDO: mensaje más preciso sobre cuentas faltantes
     if (version < 2) {
-      info.warningVersion = "El respaldo es versión 1. Las colecciones contables nuevas se inicializarán vacías.";
+      info.warningVersion =
+        "El respaldo es versión 1. Las cuentas contables nuevas (1.2.04, 1.2.05, 1.2.06, 6.2.01, 6.2.02, 6.2.03, 6.4.01) se recrearán automáticamente al abrir la primera pantalla contable.";
+    }
+
+    // ✅ NUEVO: validación informativa de cuentas clave
+    const cuentasImportadas = (payload.data.accounts || []).map((a) => a.codigo);
+    const cuentasFaltantes = CUENTAS_CLAVE.filter((c) => !cuentasImportadas.includes(c));
+    if (cuentasFaltantes.length > 0) {
+      info.cuentasFaltantes = cuentasFaltantes.length;
+      info.listaCuentasFaltantes = cuentasFaltantes.slice(0, 5).join(", ") +
+        (cuentasFaltantes.length > 5 ? `... (+${cuentasFaltantes.length - 5} más)` : "");
     }
 
     return {
@@ -348,6 +378,13 @@ window.CC_RESPALDO = (function () {
 
       if (result.info.warningVersion) {
         lines.push(result.info.warningVersion);
+      }
+
+      if (result.info.cuentasFaltantes > 0) {
+        lines.push(
+          `Cuentas clave faltantes: ${result.info.cuentasFaltantes} (${result.info.listaCuentasFaltantes}). ` +
+          `Se recrearán automáticamente al cargar el sistema.`
+        );
       }
 
       if (result.ok) {
@@ -418,16 +455,40 @@ window.CC_RESPALDO = (function () {
     }
   }
 
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: loadSeedForce intenta CC_SEED_EMPRENDIMIENTO
+     primero, para garantizar CLI-0004.
+     --------------------------------------------------------- */
+
   function loadSeedForce() {
     const ok = utils.confirmDialog(
-      "¿Cargar datos semilla de demostración? Esto reemplazará todas las colecciones actuales con los datos de ejemplo del prototipo."
+      "¿Cargar datos semilla de demostración? Esto reemplazará todas las colecciones actuales con los datos de ejemplo del prototipo (incluido el cliente CLI-0004 Cuentas Claras)."
     );
     if (!ok) return;
 
-    const loaded = storage.loadSeed(true);
+    // ✅ Intentar primero el seed del emprendimiento (incluye CLI-0004)
+    let loaded = false;
+
+    if (window.CC_SEED_EMPRENDIMIENTO && typeof window.CC_SEED_EMPRENDIMIENTO.load === "function") {
+      try {
+        const summary = window.CC_SEED_EMPRENDIMIENTO.load();
+        loaded = summary && summary.ok !== false;
+      } catch (error) {
+        console.warn("Fallo CC_SEED_EMPRENDIMIENTO.load(), intentando storage.loadSeed:", error);
+      }
+    }
+
+    // Fallback: solo semilla base
+    if (!loaded) {
+      loaded = storage.loadSeed(true);
+    }
 
     if (!loaded) {
-      setResult(elements.semillaResultado, "No se pudo cargar la semilla. Verifique que js/data/seed.js esté presente.", "danger");
+      setResult(
+        elements.semillaResultado,
+        "No se pudo cargar la semilla. Verifique que js/data/seed.js y js/data/seed-emprendimiento.js estén presentes.",
+        "danger"
+      );
       utils.showToast("No se pudo cargar la semilla.", "danger");
       return;
     }
@@ -437,15 +498,23 @@ window.CC_RESPALDO = (function () {
         "cargar_seed",
         "settings",
         null,
-        "Datos semilla cargados manualmente desde módulo de respaldo"
+        "Datos semilla cargados manualmente desde módulo de respaldo (incluye CLI-0004 si está disponible)."
       );
     }
 
-    setResult(elements.semillaResultado, "Datos semilla cargados correctamente.", "success");
+    setResult(
+      elements.semillaResultado,
+      "Datos semilla cargados correctamente. Incluye clientes demo (CLI-0001 a CLI-0003) y el emprendimiento propio (CLI-0004).",
+      "success"
+    );
     utils.showToast("Semilla cargada.", "success");
     renderStats();
     renderBitacora();
   }
+
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: resetSystem ofrece recargar semilla
+     --------------------------------------------------------- */
 
   function resetSystem() {
     const confirmation = window.prompt(
@@ -473,13 +542,21 @@ window.CC_RESPALDO = (function () {
 
     setResult(
       elements.semillaResultado,
-      "Sistema restablecido. Se recargaron las colecciones vacías y la configuración por defecto.",
+      "Sistema restablecido. Todas las colecciones están vacías. " +
+      "Para recuperar los datos de demostración (incluido CLI-0004 Cuentas Claras), pulse 'Cargar semilla'.",
       "success"
     );
     utils.showToast("Sistema restablecido.", "success");
 
     renderStats();
     renderBitacora();
+
+    // ✅ NUEVO: ofrecer recargar semilla automáticamente
+    setTimeout(() => {
+      if (utils.confirmDialog("¿Desea cargar ahora los datos de demostración para probar el sistema?")) {
+        loadSeedForce();
+      }
+    }, 300);
   }
 
   function populateBitacoraFilters() {
@@ -526,9 +603,7 @@ window.CC_RESPALDO = (function () {
     if (search) {
       data = data.filter((l) => {
         const haystack = [l.id, l.accion, l.entidad, l.registroId, l.detalle, l.usuarioId]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+          .filter(Boolean).join(" ").toLowerCase();
         return haystack.includes(search);
       });
     }

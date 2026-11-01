@@ -1,7 +1,22 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de UI: Balanza de comprobación y balanza ajustada
-   Fase 7
+   Fase 7.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - ensureAccounts() se ejecuta UNA SOLA VEZ al init (no en
+     cada render), porque el motor ya hace upsert.
+   - Badge "compensadora" y "temporal" para cuentas esContra
+     y esTemporal.
+   - includeClosing: false explícito en getTrialBalance.
+   - Header de impresión con caché para evitar re-render.
+   - El toggle "ajustada" muestra "Sin ajustes en el periodo"
+     cuando no hay líneas de ajuste (enero), en lugar de
+     "Cuadrada (sin movimientos)".
+   - Se muestra el conteo de líneas de ajuste incluidas en la
+     vista (útil para la defensa).
+   - Empty state con guía al usuario.
+   - Manejo de error si falla ensureAccounts.
    ========================================================= */
 
 window.CC_BALANZA = (function () {
@@ -13,6 +28,8 @@ window.CC_BALANZA = (function () {
   let currentAccountsMap = null;
   let currentKey = 0;
   let mode = "comprobacion";
+  let currentHeaderText = "";
+  let accountsEnsured = false;
 
   function cacheElements() {
     elements.balanzaFiltroCliente = document.getElementById("balanzaFiltroCliente");
@@ -25,6 +42,7 @@ window.CC_BALANZA = (function () {
     elements.balanzaModoBadge = document.getElementById("balanzaModoBadge");
     elements.balanzaEncabezadoImpresion = document.getElementById("balanzaEncabezadoImpresion");
     elements.tablaBalanza = document.getElementById("tablaBalanza");
+    elements.tablaResumenAnualBalanza = document.getElementById("tablaResumenAnualBalanza"); // ✅ NUEVO
     elements.pieBalanza = document.getElementById("pieBalanza");
     elements.totDebitos = document.getElementById("totDebitos");
     elements.totCreditos = document.getElementById("totCreditos");
@@ -67,6 +85,10 @@ window.CC_BALANZA = (function () {
     if (prev) selectEl.value = prev;
   }
 
+  /* ---------------------------------------------------------
+     Helpers
+     --------------------------------------------------------- */
+
   function tipoBadge(tipo) {
     const map = {
       activo: "bg-primary-subtle text-primary",
@@ -88,6 +110,24 @@ window.CC_BALANZA = (function () {
     iconEl.innerHTML = ok ? '<i class="bi bi-check2-circle"></i>' : '<i class="bi bi-x-octagon"></i>';
   }
 
+  function ensureAccountsOnce() {
+    if (accountsEnsured) return true;
+    try {
+      if (motor && motor.ensureAccounts) {
+        motor.ensureAccounts();
+      }
+      accountsEnsured = true;
+      return true;
+    } catch (error) {
+      console.error("No se pudo cargar el plan de cuentas:", error);
+      setAlert(
+        "No se pudo cargar el plan de cuentas. Revisa js/config.js y recarga el sistema.",
+        "danger"
+      );
+      return false;
+    }
+  }
+
   function updateModeLabels() {
     const isAdjusted = mode === "ajustada";
     const title = isAdjusted ? "Balanza ajustada" : "Balanza de comprobación";
@@ -103,6 +143,10 @@ window.CC_BALANZA = (function () {
     mode = checked ? checked.value : "comprobacion";
     updateModeLabels();
   }
+
+  /* ---------------------------------------------------------
+     Selectores
+     --------------------------------------------------------- */
 
   function loadClients() {
     const clients = motor.getClientsWithPeriods().sort((a, b) =>
@@ -134,34 +178,62 @@ window.CC_BALANZA = (function () {
       setAlert("No hay clientes con periodos contables.", "warning");
       return;
     }
-    const first = clients[0];
-    elements.balanzaFiltroCliente.value = first.id;
-    loadPeriods(first.id);
-    const periods = motor.getPeriodsForClient(first.id);
-    if (periods.length) elements.balanzaFiltroPeriodo.value = periods[0].id;
+
+    // ✅ CORREGIDO: preferir Cuentas Claras (CLI-0004) para la demo
+    const preferido = clients.find((c) => c.id === "CLI-0004") || clients[0];
+
+    elements.balanzaFiltroCliente.value = preferido.id;
+    loadPeriods(preferido.id);
+
+    const periods = motor.getPeriodsForClient(preferido.id);
+
+    // ✅ CORREGIDO: preferir diciembre (donde están los 65 asientos)
+    const diciembre = periods.find((p) => Number(p.mes) === 12);
+    if (diciembre) {
+      elements.balanzaFiltroPeriodo.value = diciembre.id;
+    } else if (periods.length) {
+      elements.balanzaFiltroPeriodo.value = periods[0].id;
+    }
   }
+
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: prepareContext sin ensureAccounts (una sola vez)
+     y con includeClosing: false explícito.
+     --------------------------------------------------------- */
 
   function prepareContext() {
     const clientId = elements.balanzaFiltroCliente?.value || "";
     const periodoId = elements.balanzaFiltroPeriodo?.value || "";
+
     if (!clientId || !periodoId) {
       currentCtx = null;
       currentKey = 0;
       return false;
     }
-    motor.ensureAccounts();
+
     currentCtx = motor.buildContext(clientId);
     currentAccountsMap = motor.getAccountsMap();
+
     const period = currentCtx.periodMap[periodoId];
     currentKey = period ? motor.periodKey(period) : 0;
 
     const c = window.CC_STORAGE.get("clients", clientId);
-    if (elements.balanzaEncabezadoImpresion) {
-      elements.balanzaEncabezadoImpresion.textContent =
-        `${c ? c.nombreComercial : "Cliente"} · ${motor.periodLabel(period)} · ${mode === "ajustada" ? "Balanza ajustada" : "Balanza de comprobación"} · Generado: ${utils.formatDate(utils.todayISO())}`;
+    const headerText =
+      `${c ? c.nombreComercial : "Cliente"} · ${motor.periodLabel(period)} · ` +
+      `${mode === "ajustada" ? "Balanza ajustada" : "Balanza de comprobación"} · ` +
+      `Generado: ${utils.formatDate(utils.todayISO())}`;
+
+    if (headerText !== currentHeaderText && elements.balanzaEncabezadoImpresion) {
+      elements.balanzaEncabezadoImpresion.textContent = headerText;
+      currentHeaderText = headerText;
     }
+
     return currentKey > 0;
   }
+
+  /* ---------------------------------------------------------
+     Render principal
+     --------------------------------------------------------- */
 
   function render() {
     if (!elements.tablaBalanza) return;
@@ -170,22 +242,32 @@ window.CC_BALANZA = (function () {
 
     if (!prepareContext()) {
       elements.tablaBalanza.innerHTML = `
-        <tr><td colspan="7" class="text-center text-muted py-4">Seleccione un cliente y un periodo.</td></tr>`;
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            <i class="bi bi-funnel me-1"></i>
+            Seleccione un cliente y un periodo para ver la Balanza.
+          </td>
+        </tr>`;
       elements.pieBalanza.classList.add("d-none");
       setIndicator(elements.indicadorMovimientos, elements.iconoMovimientos, false, "Cuadrada", "Sin datos");
       setIndicator(elements.indicadorSaldos, elements.iconoSaldos, false, "Cuadrada", "Sin datos");
       return;
     }
 
+    // ✅ includeClosing: false explícito
     const result = motor.getTrialBalance(currentCtx, currentAccountsMap, currentKey, {
-      includeAdjustments: mode === "ajustada"
+      includeAdjustments: mode === "ajustada",
+      includeClosing: false
     });
 
     if (!result.rows.length) {
       elements.tablaBalanza.innerHTML = `
-        <tr><td colspan="7" class="text-center text-muted py-4">
-          No hay movimientos ni saldos. Genere asientos en el Libro Diario.
-        </td></tr>`;
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            No hay movimientos ni saldos en este periodo.<br>
+            <small>Genere asientos en el Libro Diario o revise los filtros.</small>
+          </td>
+        </tr>`;
       elements.pieBalanza.classList.add("d-none");
       setIndicator(elements.indicadorMovimientos, elements.iconoMovimientos, true, "Cuadrada (sin movimientos)", "Descuadrada");
       setIndicator(elements.indicadorSaldos, elements.iconoSaldos, true, "Cuadrada (sin saldos)", "Descuadrada");
@@ -194,16 +276,29 @@ window.CC_BALANZA = (function () {
     }
 
     elements.tablaBalanza.innerHTML = result.rows
-      .map((r) => `
-        <tr>
-          <td><code>${utils.escapeHTML(r.codigo)}</code></td>
-          <td><strong>${utils.escapeHTML(r.nombre)}</strong></td>
-          <td>${tipoBadge(r.tipo)}</td>
-          <td class="text-end">${r.debitos > 0 ? utils.escapeHTML(utils.formatMoney(r.debitos)) : "-"}</td>
-          <td class="text-end">${r.creditos > 0 ? utils.escapeHTML(utils.formatMoney(r.creditos)) : "-"}</td>
-          <td class="text-end">${r.saldoDeudor > 0 ? utils.escapeHTML(utils.formatMoney(r.saldoDeudor)) : "-"}</td>
-          <td class="text-end">${r.saldoAcreedor > 0 ? utils.escapeHTML(utils.formatMoney(r.saldoAcreedor)) : "-"}</td>
-        </tr>`)
+      .map((r) => {
+        const compensadoraBadge = r.esContra
+          ? '<span class="badge bg-secondary-subtle text-secondary ms-1">compensadora</span>'
+          : "";
+        const temporalBadge = r.esTemporal
+          ? '<span class="badge bg-info-subtle text-info ms-1">temporal</span>'
+          : "";
+
+        return `
+          <tr>
+            <td><code>${utils.escapeHTML(r.codigo)}</code></td>
+            <td>
+              <strong>${utils.escapeHTML(r.nombre)}</strong>
+              ${compensadoraBadge}
+              ${temporalBadge}
+            </td>
+            <td>${tipoBadge(r.tipo)}</td>
+            <td class="text-end">${r.debitos > 0 ? utils.escapeHTML(utils.formatMoney(r.debitos)) : "-"}</td>
+            <td class="text-end">${r.creditos > 0 ? utils.escapeHTML(utils.formatMoney(r.creditos)) : "-"}</td>
+            <td class="text-end">${r.saldoDeudor > 0 ? utils.escapeHTML(utils.formatMoney(r.saldoDeudor)) : "-"}</td>
+            <td class="text-end">${r.saldoAcreedor > 0 ? utils.escapeHTML(utils.formatMoney(r.saldoAcreedor)) : "-"}</td>
+          </tr>`;
+      })
       .join("");
 
     elements.totDebitos.textContent = utils.formatMoney(result.totals.debitos);
@@ -227,15 +322,21 @@ window.CC_BALANZA = (function () {
       "Descuadrada"
     );
 
+    // ✅ Alertas mejoradas
     if (!result.movementsBalanced) {
       setAlert("Atención: los débitos y créditos no cuadran. Revise los asientos del Libro Diario.", "danger");
     } else if (!result.balancesBalanced) {
       setAlert("Atención: los saldos acumulados no cuadran. Puede faltar arrastre de periodos anteriores o naturaleza de cuenta.", "warning");
     } else if (mode === "comprobacion" && result.adjustmentLinesInPeriod > 0) {
       setAlert(`Hay ${result.adjustmentLinesInPeriod} líneas de ajuste en este periodo. Esta vista las excluye. Cambie a Balanza ajustada para verlas.`, "info");
+    } else if (mode === "ajustada" && result.adjustmentLinesInPeriod === 0) {
+      setAlert("Este periodo no tiene líneas de ajuste registradas. La Balanza ajustada coincide con la de comprobación.", "info");
     } else {
       setAlert("");
     }
+
+    // ✅ NUEVO: actualizar el resumen anual
+    renderResumenAnual();
   }
 
   function bindEvents() {
@@ -259,6 +360,10 @@ window.CC_BALANZA = (function () {
       return;
     }
     cacheElements();
+
+    // ✅ ensureAccounts una sola vez al init
+    if (!ensureAccountsOnce()) return;
+
     readMode();
     loadClients();
     autoSelectDefault();
@@ -267,6 +372,81 @@ window.CC_BALANZA = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+  /* ---------------------------------------------------------
+   ✅ NUEVO: Resumen anual de Balanzas (12 meses)
+   Muestra débitos, créditos y saldos acumulados por mes,
+   y verifica si cada mes cuadra.
+   --------------------------------------------------------- */
+function renderResumenAnual() {
+  if (!elements.tablaResumenAnualBalanza) return;
+
+  const clientId = elements.balanzaFiltroCliente?.value || "";
+  if (!clientId) {
+    elements.tablaResumenAnualBalanza.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Seleccione un cliente.</td></tr>`;
+    return;
+  }
+
+  const periods = motor.getPeriodsForClient(clientId);
+  if (!periods.length) {
+    elements.tablaResumenAnualBalanza.innerHTML = `
+      <tr><td colspan="6" class="text-center text-muted py-4">Sin períodos.</td></tr>`;
+    return;
+  }
+
+  // Ordenar por mes ascendente (enero → diciembre)
+  const sorted = [...periods].sort((a, b) => Number(a.mes) - Number(b.mes));
+
+  const ctx = motor.buildContext(clientId);
+  const map = motor.getAccountsMap();
+
+  let totDeb = 0, totCred = 0;
+  let ultimoSaldoDeudor = 0, ultimoSaldoAcreedor = 0;
+  let todosCuadran = true;
+
+  const filas = sorted.map((period) => {
+    const key = motor.periodKey(period);
+    const b = motor.getTrialBalance(ctx, map, key, {
+      includeAdjustments: mode === "ajustada",
+      includeClosing: false
+    });
+
+    totDeb += b.totals.debitos;
+    totCred += b.totals.creditos;
+    ultimoSaldoDeudor = b.totals.saldoDeudor;
+    ultimoSaldoAcreedor = b.totals.saldoAcreedor;
+
+    const cuadra = b.movementsBalanced && b.balancesBalanced;
+    if (!cuadra) todosCuadran = false;
+
+    return `
+      <tr>
+        <td><strong>${utils.escapeHTML(motor.periodLabel(period))}</strong></td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(b.totals.debitos))}</td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(b.totals.creditos))}</td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(b.totals.saldoDeudor))}</td>
+        <td class="text-end">${utils.escapeHTML(utils.formatMoney(b.totals.saldoAcreedor))}</td>
+        <td>${cuadra
+          ? '<span class="badge cc-status-activo">Cuadrada</span>'
+          : '<span class="badge cc-status-vencida">Descuadrada</span>'}</td>
+      </tr>`;
+  });
+
+  const filaTotal = `
+    <tr class="table-light fw-semibold">
+      <td class="text-end">ACUMULADO ANUAL</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(totDeb))}</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(totCred))}</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(ultimoSaldoDeudor))}</td>
+      <td class="text-end">${utils.escapeHTML(utils.formatMoney(ultimoSaldoAcreedor))}</td>
+      <td>${todosCuadran
+        ? '<span class="badge cc-status-activo">12 meses cuadrados</span>'
+        : '<span class="badge cc-status-vencida">Hay meses descuadrados</span>'}</td>
+    </tr>`;
+
+  elements.tablaResumenAnualBalanza.innerHTML = filas.join("") + filaTotal;
+}
 
   return { init, render };
 })();

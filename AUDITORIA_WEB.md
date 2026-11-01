@@ -1,6 +1,6 @@
 # 🌐 Auditoría Frontend (HTML, CSS/Bootstrap, JS) — cuentas-claras-mvp
 
-> Generado: `2026-10-30 11:00`
+> Generado: `2026-10-31 16:39`
 
 ## Resumen Web
 

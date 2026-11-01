@@ -1,7 +1,20 @@
 /* =========================================================
    Cuentas Claras MVP
    Módulo de UI: Costos, rentabilidad e indicadores
-   Fase 9
+   Fase 9.1
+   ------------------------------------------------------------
+   ✅ CORREGIDO:
+   - renderCostTable() usa los campos *Pct que devuelve
+     costos.js (ventasPct, otrosIngresosPct, etc.) en lugar de
+     pasar el monto absoluto a percentText.
+   - Estructura del Estado de Resultados alineada con el
+     Capítulo 5.9: se agregan "(-) Depreciación y amortización"
+     y "Utilidad antes de impuestos".
+   - Se renombra "(-) IT estimado informativo" a
+     "(-) Gastos por impuestos (IT)".
+   - Se usa gastosOperativos (con fallback a gastos) para que
+     no falle si el alias no existe.
+   - La columna % muestra "—" cuando totalIngresos = 0.
    ========================================================= */
 
 window.CC_INDICADORES = (function () {
@@ -36,6 +49,7 @@ window.CC_INDICADORES = (function () {
     elements.tablaPuntoEquilibrio = document.getElementById("tablaPuntoEquilibrio");
     elements.tablaIndicadores = document.getElementById("tablaIndicadores");
     elements.listaLectura = document.getElementById("listaLectura");
+    elements.tablaResumenAnualIndicadores = document.getElementById("tablaResumenAnualIndicadores"); // ✅ NUEVO
   }
 
   function setAlert(message, type = "info") {
@@ -54,24 +68,20 @@ window.CC_INDICADORES = (function () {
 
   function populateSelect(selectEl, options, placeholder) {
     if (!selectEl) return;
-
     const prev = selectEl.value;
     selectEl.innerHTML = "";
-
     if (placeholder !== null) {
       const opt = document.createElement("option");
       opt.value = "";
       opt.textContent = placeholder;
       selectEl.appendChild(opt);
     }
-
     options.forEach((o) => {
       const opt = document.createElement("option");
       opt.value = o.value;
       opt.textContent = o.label;
       selectEl.appendChild(opt);
     });
-
     if (prev) selectEl.value = prev;
   }
 
@@ -83,7 +93,6 @@ window.CC_INDICADORES = (function () {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "No calculable";
     }
-
     return `${Number(value).toFixed(2)}${suffix}`;
   }
 
@@ -91,7 +100,6 @@ window.CC_INDICADORES = (function () {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "No calculable";
     }
-
     return `${Number(value).toFixed(2)}${suffix}`;
   }
 
@@ -99,7 +107,6 @@ window.CC_INDICADORES = (function () {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "No calculable";
     }
-
     return Number(value).toFixed(decimals);
   }
 
@@ -107,7 +114,6 @@ window.CC_INDICADORES = (function () {
     const clients = motor.getClientsWithPeriods().sort((a, b) =>
       String(a.nombreComercial || "").localeCompare(String(b.nombreComercial || ""))
     );
-
     populateSelect(
       elements.ciFiltroCliente,
       clients.map((c) => ({
@@ -123,9 +129,7 @@ window.CC_INDICADORES = (function () {
       populateSelect(elements.ciFiltroPeriodo, [], "Seleccione primero un cliente...");
       return;
     }
-
     const periods = motor.getPeriodsForClient(clientId);
-
     populateSelect(
       elements.ciFiltroPeriodo,
       periods.map((p) => ({
@@ -137,21 +141,27 @@ window.CC_INDICADORES = (function () {
   }
 
   function autoSelectDefault() {
-    const clients = motor.getClientsWithPeriods();
+      const clients = motor.getClientsWithPeriods();
+      if (!clients.length) {
+        setAlert("No hay clientes con periodos contables.", "warning");
+        return;
+      }
 
-    if (!clients.length) {
-      setAlert("No hay clientes con periodos contables.", "warning");
-      return;
-    }
+      // ✅ CORREGIDO: preferir Cuentas Claras (CLI-0004)
+      const preferido = clients.find((c) => c.id === "CLI-0004") || clients[0];
 
-    const first = clients[0];
-    elements.ciFiltroCliente.value = first.id;
-    loadPeriods(first.id);
+      elements.ciFiltroCliente.value = preferido.id;
+      loadPeriods(preferido.id);
 
-    const periods = motor.getPeriodsForClient(first.id);
-    if (periods.length) {
-      elements.ciFiltroPeriodo.value = periods[0].id;
-    }
+      const periods = motor.getPeriodsForClient(preferido.id);
+
+      // ✅ CORREGIDO: preferir diciembre
+      const diciembre = periods.find((p) => Number(p.mes) === 12);
+      if (diciembre) {
+        elements.ciFiltroPeriodo.value = diciembre.id;
+      } else if (periods.length) {
+        elements.ciFiltroPeriodo.value = periods[0].id;
+      }
   }
 
   function renderPeriodState(period) {
@@ -164,20 +174,12 @@ window.CC_INDICADORES = (function () {
     }
 
     const estado = String(period.estado || "").toLowerCase();
-
     let cls = "bg-secondary";
     let label = estado;
 
-    if (estado === "abierto") {
-      cls = "cc-status-abierto";
-      label = "Abierto";
-    } else if (estado === "en_revision") {
-      cls = "cc-status-en_revision";
-      label = "En revisión";
-    } else if (estado === "cerrado") {
-      cls = "cc-status-cerrado";
-      label = "Cerrado";
-    }
+    if (estado === "abierto") { cls = "cc-status-abierto"; label = "Abierto"; }
+    else if (estado === "en_revision") { cls = "cc-status-en_revision"; label = "En revisión"; }
+    else if (estado === "cerrado") { cls = "cc-status-cerrado"; label = "Cerrado"; }
 
     elements.ciEstadoPeriodo.className = `badge ${cls} w-100 text-center py-2`;
     elements.ciEstadoPeriodo.textContent = label;
@@ -185,39 +187,43 @@ window.CC_INDICADORES = (function () {
 
   function renderTopCards(data) {
     if (!data) return;
-
     const income = data.income;
     const cost = data.costMetrics;
 
     if (elements.ciVentas) {
       elements.ciVentas.textContent = money(income.totalIngresos);
     }
-
     if (elements.ciCostoVentas) {
       elements.ciCostoVentas.textContent = money(income.costoNeto);
     }
-
     if (elements.ciUtilidadBruta) {
       elements.ciUtilidadBruta.textContent = money(income.utilidadBruta);
       elements.ciUtilidadBruta.className =
-        "h5 mb-0 fw-bold " +
-        (income.utilidadBruta >= 0 ? "text-success" : "text-danger");
+        "h5 mb-0 fw-bold " + (income.utilidadBruta >= 0 ? "text-success" : "text-danger");
     }
-
     if (elements.ciMargenBruto) {
       elements.ciMargenBruto.textContent = `Margen bruto: ${percentText(cost.margenBruto)}`;
     }
-
     if (elements.ciUtilidadNeta) {
       elements.ciUtilidadNeta.textContent = money(income.utilidadNeta);
       elements.ciUtilidadNeta.className =
-        "h5 mb-0 fw-bold " +
-        (income.utilidadNeta >= 0 ? "text-success" : "text-danger");
+        "h5 mb-0 fw-bold " + (income.utilidadNeta >= 0 ? "text-success" : "text-danger");
     }
-
     if (elements.ciMargenNeto) {
       elements.ciMargenNeto.textContent = `Margen neto: ${percentText(cost.margenNeto)}`;
     }
+  }
+
+  /* ---------------------------------------------------------
+     ✅ CORREGIDO: renderCostTable usa los campos *Pct y la
+     estructura del Capítulo 5.9.
+     --------------------------------------------------------- */
+
+  function pctOrDash(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      return "—";
+    }
+    return `${Number(value).toFixed(2)}%`;
   }
 
   function renderCostTable(data) {
@@ -233,23 +239,38 @@ window.CC_INDICADORES = (function () {
     const i = data.income;
     const c = data.costMetrics;
 
+    // ✅ CORREGIDO: usa gastosOperativos con fallback a gastos
+    const gastosOperativos = i.gastosOperativos || i.gastos || [];
+
+    // ✅ CORREGIDO: la columna % usa los campos *Pct
     const rows = [
-      { label: "Ventas", value: i.ventas, pct: percentText(i.ventas, "%") },
-      { label: "Otros ingresos", value: i.otrosIngresos, pct: percentText(i.otrosIngresos, "%") },
+      { label: "Ventas", value: i.ventas, pct: pctOrDash(i.ventasPct) },
+      { label: "Otros ingresos", value: i.otrosIngresos, pct: pctOrDash(i.otrosIngresosPct) },
       { label: "Total ingresos", value: i.totalIngresos, pct: "100.00%", strong: true },
-      { label: "Compras / costo bruto", value: i.comprasBrutas, pct: percentText(i.comprasBrutas, "%") },
-      { label: "(-) Devoluciones y descuentos sobre compras", value: -i.devolucionesCompras, pct: percentText(-i.devolucionesCompras, "%") },
-      { label: "Costo neto de ventas", value: i.costoNeto, pct: percentText(i.costoNeto, "%"), strong: true },
-      { label: "Utilidad bruta", value: i.utilidadBruta, pct: percentText(c.margenBruto), strong: true, color: i.utilidadBruta >= 0 ? "success" : "danger" },
-      ...i.gastos.map((g) => ({
+      { label: "Costo de servicios prestados", value: i.comprasBrutas, pct: pctOrDash(i.comprasBrutasPct) },
+      { label: "(-) Devoluciones y descuentos sobre compras", value: -i.devolucionesCompras, pct: pctOrDash(i.devolucionesComprasPct) },
+      { label: "Costo neto de ventas", value: i.costoNeto, pct: pctOrDash(i.costoNetoPct), strong: true },
+      { label: "Utilidad bruta", value: i.utilidadBruta, pct: pctOrDash(c.margenBruto), strong: true, color: i.utilidadBruta >= 0 ? "success" : "danger" },
+
+      ...gastosOperativos.map((g) => ({
         label: g.nombre,
         value: g.monto,
-        pct: percentText(g.monto, "%")
+        pct: pctOrDash(i.totalIngresos > 0 ? costos.round2((g.monto / i.totalIngresos) * 100) : null)
       })),
-      { label: "Total gastos operativos", value: i.totalGastos, pct: percentText(i.totalGastos, "%"), strong: true },
-      { label: "Utilidad operativa", value: i.utilidadOperativa, pct: percentText(c.margenOperativo), strong: true, color: i.utilidadOperativa >= 0 ? "success" : "danger" },
-      { label: "(-) IT estimado informativo", value: -i.impuestosEstimados, pct: percentText(-i.impuestosEstimados, "%") },
-      { label: "Utilidad neta del periodo", value: i.utilidadNeta, pct: percentText(c.margenNeto), strong: true, color: i.utilidadNeta >= 0 ? "success" : "danger" }
+
+      { label: "Total gastos operativos", value: i.totalGastosOperativos, pct: pctOrDash(i.totalGastosOperativosPct), strong: true },
+      { label: "Utilidad operativa", value: i.utilidadOperativa, pct: pctOrDash(c.margenOperativo), strong: true, color: i.utilidadOperativa >= 0 ? "success" : "danger" },
+
+      // ✅ NUEVA LÍNEA: depreciación (alineado con Cap. 5.9)
+      { label: "(-) Depreciación y amortización", value: -i.depreciacion, pct: pctOrDash(i.depreciacionPct) },
+
+      // ✅ NUEVA LÍNEA: utilidad antes de impuestos
+      { label: "Utilidad antes de impuestos", value: i.utilidadAntesImpuestos, pct: pctOrDash(i.utilidadAntesImpuestosPct), strong: true, color: i.utilidadAntesImpuestos >= 0 ? "success" : "danger" },
+
+      // ✅ RENOMBRADO: "Gastos por impuestos (IT)" en lugar de "IT estimado"
+      { label: "(-) Gastos por impuestos (IT)", value: -i.gastosImpuestos, pct: pctOrDash(i.gastosImpuestosPct) },
+
+      { label: "Utilidad neta del periodo", value: i.utilidadNeta, pct: pctOrDash(c.margenNeto), strong: true, color: i.utilidadNeta >= 0 ? "success" : "danger" }
     ];
 
     elements.tablaCostosRentabilidad.innerHTML = rows
@@ -366,7 +387,7 @@ window.CC_INDICADORES = (function () {
           ? "Rentabilidad neta aceptable para prototipo de microempresa."
           : margenNeto >= 0
           ? "Rentabilidad baja; revisar costos y gastos."
-          : "Resultado negativo; se requiere plan de corrective action contable."
+          : "Resultado negativo; se requiere plan de acción contable."
       );
     }
 
@@ -449,16 +470,13 @@ window.CC_INDICADORES = (function () {
     ];
 
     elements.tablaIndicadores.innerHTML = rows
-      .map(
-        (row) => `
-          <tr>
-            <td><strong>${utils.escapeHTML(row.nombre)}</strong></td>
-            <td>${utils.escapeHTML(row.valor)}</td>
-            <td class="small">${utils.escapeHTML(row.lectura)}</td>
-          </tr>
-        `
-      )
-      .join("");
+      .map((row) => `
+        <tr>
+          <td><strong>${utils.escapeHTML(row.nombre)}</strong></td>
+          <td>${utils.escapeHTML(row.valor)}</td>
+          <td class="small">${utils.escapeHTML(row.lectura)}</td>
+        </tr>
+      `).join("");
   }
 
   function renderInsights(data) {
@@ -472,15 +490,12 @@ window.CC_INDICADORES = (function () {
     }
 
     elements.listaLectura.innerHTML = data.insights
-      .map(
-        (text) => `
-          <li class="list-group-item">
-            <i class="bi bi-arrow-right-short text-primary"></i>
-            ${utils.escapeHTML(text)}
-          </li>
-        `
-      )
-      .join("");
+      .map((text) => `
+        <li class="list-group-item">
+          <i class="bi bi-arrow-right-short text-primary"></i>
+          ${utils.escapeHTML(text)}
+        </li>
+      `).join("");
   }
 
   function renderAll() {
@@ -528,6 +543,7 @@ window.CC_INDICADORES = (function () {
     renderBreakeven(currentData);
     renderIndicators(currentData);
     renderInsights(currentData);
+    renderResumenAnual(); // ✅ NUEVO
   }
 
   function getCurrentUserId() {
@@ -596,6 +612,8 @@ window.CC_INDICADORES = (function () {
   function init() {
     if (!window.CC_AUTH || !window.CC_AUTH.isAuthenticated()) return;
 
+    if (!document.getElementById("ciFiltroCliente")) return;
+
     if (!motor) {
       console.error("No se encontró CC_MAYOR_BALANZA.");
       utils.showToast("Falta js/modules/mayor-balanza.js.", "danger");
@@ -616,6 +634,66 @@ window.CC_INDICADORES = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+/* ---------------------------------------------------------
+   ✅ NUEVO: Resumen anual de indicadores (12 meses)
+   Usa CC_COSTOS.buildData() para cada período y muestra
+   la evolución mes a mes.
+   --------------------------------------------------------- */
+function renderResumenAnual() {
+  if (!elements.tablaResumenAnualIndicadores) return;
+
+  const clientId = elements.ciFiltroCliente?.value || "";
+  if (!clientId) {
+    elements.tablaResumenAnualIndicadores.innerHTML = `
+      <tr><td colspan="7" class="text-center text-muted py-4">Seleccione un cliente.</td></tr>`;
+    return;
+  }
+
+  const periods = motor.getPeriodsForClient(clientId);
+  if (!periods.length) {
+    elements.tablaResumenAnualIndicadores.innerHTML = `
+      <tr><td colspan="7" class="text-center text-muted py-4">Sin períodos.</td></tr>`;
+    return;
+  }
+
+  const sorted = [...periods].sort((a, b) => Number(a.mes) - Number(b.mes));
+
+  const filas = sorted.map((period) => {
+    const data = costos.buildData(clientId, period.id);
+    if (!data.ok) {
+      return `<tr>
+        <td><strong>${utils.escapeHTML(motor.periodLabel(period))}</strong></td>
+        <td colspan="6" class="text-center text-muted small">Sin datos</td>
+      </tr>`;
+    }
+
+    const ing = data.income;
+    const ind = data.indicators;
+    const bal = data.balanceSheet;
+
+    const utilidadCls = ing.utilidadNeta >= 0 ? "text-success" : "text-danger";
+    const liquidezTxt = ind.liquidezCorriente !== null
+      ? ratioText(ind.liquidezCorriente, "x") : "—";
+    const margenTxt = costos.round2((ing.utilidadNeta / (ing.totalIngresos || 1)) * 100);
+    const roeTxt = ind.roe !== null ? percentText(ind.roe) : "—";
+    const endTxt = ind.endeudamiento !== null ? percentText(ind.endeudamiento) : "—";
+
+    return `<tr>
+      <td><strong>${utils.escapeHTML(motor.periodLabel(period))}</strong></td>
+      <td class="text-end ${utilidadCls} fw-semibold">${utils.formatMoney(ing.utilidadNeta)}</td>
+      <td class="text-end">${margenTxt.toFixed(2)}%</td>
+      <td class="text-end">${utils.escapeHTML(liquidezTxt)}</td>
+      <td class="text-end">${utils.escapeHTML(endTxt)}</td>
+      <td class="text-end">${utils.escapeHTML(roeTxt)}</td>
+      <td>${bal.balanced
+        ? '<span class="badge cc-status-activo">Cuadrado</span>'
+        : '<span class="badge cc-status-vencida">Descuadrado</span>'}</td>
+    </tr>`;
+  });
+
+  elements.tablaResumenAnualIndicadores.innerHTML = filas.join("");
+}
 
   return {
     init,
